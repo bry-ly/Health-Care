@@ -44,6 +44,9 @@ export function TimeSlotPicker({
 
         const data = await response.json();
         setAvailableSlots(data.availableSlots || []);
+        if (data.message && data.availableSlots.length === 0) {
+          setError(data.message);
+        }
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to load time slots");
         setAvailableSlots([]);
@@ -80,16 +83,25 @@ export function TimeSlotPicker({
             <Spinner className="h-6 w-6" />
           </div>
         ) : error ? (
-          <div className="text-center py-8 text-destructive">{error}</div>
+          <div className="text-center py-8">
+            <p className="text-destructive font-medium mb-2">{error}</p>
+            <p className="text-sm text-muted-foreground">
+              The doctor may not have set their availability schedule yet. Please try another date or contact the doctor.
+            </p>
+          </div>
         ) : availableSlots.length === 0 ? (
-          <div className="text-center py-8 text-muted-foreground">
-            No available time slots for this date
+          <div className="text-center py-8">
+            <p className="text-muted-foreground font-medium mb-2">No available time slots for this date</p>
+            <p className="text-sm text-muted-foreground">
+              The doctor may not be available on this day, or all slots may be booked. Please try another date.
+            </p>
           </div>
         ) : (
           <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
             {availableSlots.map((slot) => (
               <Button
                 key={slot}
+                type="button"
                 variant={selectedTime === slot ? "default" : "outline"}
                 size="sm"
                 onClick={() => onTimeSelect(slot)}
