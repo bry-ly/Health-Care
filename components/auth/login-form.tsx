@@ -139,7 +139,7 @@ export function LoginForm({
 
               {/* CAPTCHA Verification Note for Security */}
               <Field>
-                <FieldDescription className="text-xs">
+                <FieldDescription className="text-xs mx-auto flex justify-center">
                   ✓ Secure account with verification for your protection
                 </FieldDescription>
               </Field>

@@ -124,7 +124,7 @@ export function SignupForm({
                 <Input
                   id="name"
                   type="text"
-                  placeholder="John Doe"
+                  placeholder="Enter your full name"
                   required
                   disabled={isLoading}
                   value={formData.name}
@@ -146,9 +146,12 @@ export function SignupForm({
                   onChange={handleChange}
                   className="h-9"
                 />
+                <FieldDescription className="text-xs mx-auto flex justify-center">
+                  ✓ Secure account with verification for your protection
+                </FieldDescription>
               </Field>
               <Field>
-                <Field className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 gap-3">
                   <Field>
                     <FieldLabel htmlFor="password" className="text-sm">
                       Password
@@ -209,7 +212,7 @@ export function SignupForm({
                       </button>
                     </div>
                   </Field>
-                </Field>
+                </div>
                 <FieldDescription className="text-xs text-shadow-2xs">
                   Minimum 8 characters
                 </FieldDescription>
