@@ -16,7 +16,7 @@ export async function sendEmail({ to, subject, html }: EmailOptions) {
     }
 
     const { data, error } = await resend.emails.send({
-      from: process.env.EMAIL_FROM || "Healthcare System <noreply@example.com>",
+      from: process.env.EMAIL_FROM || "Healthcare System <noreply@bryanpalay.me>",
       to,
       subject,
       html,
