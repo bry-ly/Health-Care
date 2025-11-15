@@ -4,14 +4,13 @@ import { Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import React from "react";
 import { cn } from "@/lib/utils";
-import { ThemeSwitcher } from "@/components/ui/theme-switcher";
 import { IconHeartbeat } from "@tabler/icons-react";
 
 const menuItems = [
-  { name: "Features", href: "#features" },
-  { name: "For Doctors", href: "#doctors" },
-  { name: "For Patients", href: "#patients" },
   { name: "About", href: "#about" },
+  { name: "Features", href: "#features" },
+  { name: "For Doctors", href: "#doctor-content" },
+  { name: "For Patients", href: "#patient-content" },
 ];
 
 export const HeroHeader = () => {
@@ -91,8 +90,7 @@ export const HeroHeader = () => {
                   ))}
                 </ul>
               </div>
-              <div className="flex w-full flex-col space-y-3 sm:flex-row sm:items-center sm:gap-3 sm:space-y-0 md:w-fit">
-                <ThemeSwitcher />
+              <div className="flex w-full flex-col space-y-3 sm:flex-row sm:items-center sm:gap-3 sm:space-y-0 md:w-fit"> 
                 <Button
                   asChild
                   variant="outline"

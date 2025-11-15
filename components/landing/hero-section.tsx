@@ -70,11 +70,12 @@ export default function HeroSection() {
               className="mask-b-from-35% mask-b-to-90% absolute inset-0 top-56 -z-20 lg:top-32"
             >
               <Image
-                src="https://ik.imagekit.io/lrigu76hy/tailark/night-background.jpg?updatedAt=1745733451120"
+                src="/doctor.jpeg"
                 alt="background"
-                className="hidden size-full dark:block"
-                width="3276"
-                height="4095"
+                className="hidden size-full "
+                fill
+                priority
+                quality={90}
               />
             </AnimatedGroup>
 
@@ -196,7 +197,7 @@ export default function HeroSection() {
                   />
                   <Image
                     className="z-2 border-border/25 aspect-15/8 relative rounded-2xl border dark:hidden"
-                    src="/preview/patientdash-light.png"
+                    src="/preview/patientdash-light.jpg"
                     alt="app screen"
                     width="2700"
                     height="1440"
