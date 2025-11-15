@@ -1,16 +1,17 @@
 "use client";
 import Link from "next/link";
-import { Logo } from "@/components/landing/logo";
 import { Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import React from "react";
 import { cn } from "@/lib/utils";
+import { ThemeSwitcher } from "@/components/ui/theme-switcher";
+import { IconHeartbeat } from "@tabler/icons-react";
 
 const menuItems = [
-  { name: "Features", href: "#link" },
-  { name: "Solution", href: "#link" },
-  { name: "Pricing", href: "#link" },
-  { name: "About", href: "#link" },
+  { name: "Features", href: "#features" },
+  { name: "For Doctors", href: "#doctors" },
+  { name: "For Patients", href: "#patients" },
+  { name: "About", href: "#about" },
 ];
 
 export const HeroHeader = () => {
@@ -44,7 +45,10 @@ export const HeroHeader = () => {
                 aria-label="home"
                 className="flex items-center space-x-2"
               >
-                <Logo />
+                <div className="bg-primary text-primary-foreground flex size-8 items-center justify-center rounded-lg">
+                  <IconHeartbeat className="size-5" />
+                </div>
+                <span className="text-lg font-semibold">HealthCare</span>
               </Link>
 
               <button
@@ -87,14 +91,15 @@ export const HeroHeader = () => {
                   ))}
                 </ul>
               </div>
-              <div className="flex w-full flex-col space-y-3 sm:flex-row sm:gap-3 sm:space-y-0 md:w-fit">
+              <div className="flex w-full flex-col space-y-3 sm:flex-row sm:items-center sm:gap-3 sm:space-y-0 md:w-fit">
+                <ThemeSwitcher />
                 <Button
                   asChild
                   variant="outline"
                   size="sm"
                   className={cn(isScrolled && "lg:hidden")}
                 >
-                  <Link href="#">
+                  <Link href="/login">
                     <span>Login</span>
                   </Link>
                 </Button>
@@ -103,7 +108,7 @@ export const HeroHeader = () => {
                   size="sm"
                   className={cn(isScrolled && "lg:hidden")}
                 >
-                  <Link href="#">
+                  <Link href="/signup">
                     <span>Sign Up</span>
                   </Link>
                 </Button>
@@ -112,7 +117,7 @@ export const HeroHeader = () => {
                   size="sm"
                   className={cn(isScrolled ? "lg:inline-flex" : "hidden")}
                 >
-                  <Link href="#">
+                  <Link href="/signup">
                     <span>Get Started</span>
                   </Link>
                 </Button>
