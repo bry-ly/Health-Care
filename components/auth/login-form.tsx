@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -15,38 +16,69 @@ import {
   FieldDescription,
   FieldGroup,
   FieldLabel,
-  FieldSeparator,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { signIn } from "@/lib/auth-client";
+import { toast } from "sonner";
+import { Eye, EyeOff } from "lucide-react";
 
 export function LoginForm({
   className,
   ...props
 }: React.ComponentProps<"div">) {
-  const [userType, setUserType] = useState<"patient" | "doctor" | "admin">(
-    "patient"
-  );
+  const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [formData, setFormData] = useState({
+    email: "",
+    password: "",
+  });
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsLoading(true);
-    // TODO: Implement login logic
-    setTimeout(() => setIsLoading(false), 2000);
+
+    try {
+      // Sign in the user
+      const result = await signIn.email({
+        email: formData.email,
+        password: formData.password,
+      });
+
+      if (result.error) {
+        toast.error(result.error.message || "Invalid email or password");
+        setIsLoading(false);
+        return;
+      }
+
+      toast.success("Login successful!");
+
+      // Redirect to /dashboard - middleware will handle role-based redirect
+      router.push("/dashboard");
+    } catch (error: unknown) {
+      console.error("Login error:", error);
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "Failed to login. Please try again.";
+      toast.error(errorMessage);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData({
+      ...formData,
+      [e.target.id]: e.target.value,
+    });
   };
 
   return (
     <div className={cn("flex flex-col gap-6", className)} {...props}>
       <Card>
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl">Healthcare Portal</CardTitle>
+          <CardTitle className="text-2xl">Welcome Back</CardTitle>
           <CardDescription>
             Login to access your appointments and health information
           </CardDescription>
@@ -54,29 +86,6 @@ export function LoginForm({
         <CardContent>
           <form onSubmit={handleSubmit}>
             <FieldGroup>
-              {/* User Type Selection */}
-              <Field>
-                <FieldLabel htmlFor="userType">Login as</FieldLabel>
-                <Select
-                  value={userType}
-                  onValueChange={(value) =>
-                    setUserType(value as "patient" | "doctor" | "admin")
-                  }
-                >
-                  <SelectTrigger id="userType">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="patient">Patient</SelectItem>
-                    <SelectItem value="doctor">Doctor</SelectItem>
-                    <SelectItem value="admin">Admin</SelectItem>
-                  </SelectContent>
-                </Select>
-              </Field>
-              <FieldSeparator className="*:data-[slot=field-separator-content]:bg-card">
-                Or continue with email
-              </FieldSeparator>
-
               {/* Email Field */}
               <Field>
                 <FieldLabel htmlFor="email">Email Address</FieldLabel>
@@ -86,6 +95,8 @@ export function LoginForm({
                   placeholder="your.email@example.com"
                   required
                   disabled={isLoading}
+                  value={formData.email}
+                  onChange={handleChange}
                 />
               </Field>
 
@@ -100,13 +111,30 @@ export function LoginForm({
                     Forgot password?
                   </a>
                 </div>
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="••••••••"
-                  required
-                  disabled={isLoading}
-                />
+                <div className="relative">
+                  <Input
+                    id="password"
+                    type={showPassword ? "text" : "password"}
+                    placeholder="••••••••"
+                    required
+                    disabled={isLoading}
+                    value={formData.password}
+                    onChange={handleChange}
+                    className="pr-10"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                    disabled={isLoading}
+                  >
+                    {showPassword ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
+                  </button>
+                </div>
               </Field>
 
               {/* CAPTCHA Verification Note for Security */}
