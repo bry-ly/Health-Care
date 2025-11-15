@@ -60,7 +60,7 @@ export async function createNotification(options: CreateNotificationOptions) {
           case "BOOKING_CONFIRMATION":
           case "NEW_BOOKING":
             if (emailData.appointmentDate && emailData.timeSlot) {
-              emailHtml = appointmentConfirmationEmail({
+              emailHtml = await appointmentConfirmationEmail({
                 patientName: emailData.patientName,
                 doctorName: emailData.doctorName,
                 appointmentDate: emailData.appointmentDate,
@@ -71,7 +71,7 @@ export async function createNotification(options: CreateNotificationOptions) {
             break;
           case "APPOINTMENT_REMINDER":
             if (emailData.appointmentDate && emailData.timeSlot) {
-              emailHtml = appointmentReminderEmail({
+              emailHtml = await appointmentReminderEmail({
                 patientName: emailData.patientName,
                 doctorName: emailData.doctorName,
                 appointmentDate: emailData.appointmentDate,
@@ -81,7 +81,7 @@ export async function createNotification(options: CreateNotificationOptions) {
             break;
           case "CANCELLATION":
             if (emailData.appointmentDate && emailData.timeSlot) {
-              emailHtml = appointmentCancellationEmail({
+              emailHtml = await appointmentCancellationEmail({
                 patientName: emailData.patientName,
                 doctorName: emailData.doctorName,
                 appointmentDate: emailData.appointmentDate,
@@ -92,7 +92,7 @@ export async function createNotification(options: CreateNotificationOptions) {
             break;
           case "RESCHEDULE":
             if (emailData.oldDate && emailData.oldTimeSlot && emailData.newDate && emailData.newTimeSlot) {
-              emailHtml = appointmentRescheduleEmail({
+              emailHtml = await appointmentRescheduleEmail({
                 patientName: emailData.patientName,
                 doctorName: emailData.doctorName,
                 oldDate: emailData.oldDate,
