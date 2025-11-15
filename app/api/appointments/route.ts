@@ -157,14 +157,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Only DOCTOR and ADMIN can create appointments
-    if (session.user.role !== "DOCTOR" && session.user.role !== "ADMIN") {
-      return NextResponse.json(
-        { error: "Forbidden. Only doctors and admins can create appointments." },
-        { status: 403 }
-      );
-    }
-
     const body = await request.json();
     const {
       patientId,
@@ -183,8 +175,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // For doctors, verify they can only create appointments for themselves
-    if (session.user.role === "DOCTOR") {
+    // Role-based validation and authorization
+    if (session.user.role === "PATIENT") {
+      // Patients can only book appointments for themselves
+      if (patientId !== session.user.id) {
+        return NextResponse.json(
+          { error: "Patients can only book appointments for themselves" },
+          { status: 403 }
+        );
+      }
+    } else if (session.user.role === "DOCTOR") {
+      // Doctors can only create appointments for themselves as the doctor
       const doctor = await prisma.doctor.findUnique({
         where: { userId: session.user.id },
       });
@@ -203,6 +204,7 @@ export async function POST(request: NextRequest) {
         );
       }
     }
+    // ADMIN can create appointments for anyone
 
     // Check if time slot is available
     const existingAppointment = await prisma.appointment.findFirst({
@@ -273,9 +275,20 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// PATCH update an appointment (reschedule/cancel)
+// PATCH update an appointment (reschedule/cancel/accept/reject)
 export async function PATCH(request: NextRequest) {
   try {
+    const session = await auth.api.getSession({
+      headers: await headers(),
+    });
+
+    if (!session) {
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401 }
+      );
+    }
+
     const body = await request.json();
     const { appointmentId, status: statusParam, appointmentDate, timeSlot, cancelReason } =
       body;
@@ -286,6 +299,49 @@ export async function PATCH(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    // Get the appointment first to check authorization
+    const existingAppointment = await prisma.appointment.findUnique({
+      where: { id: appointmentId },
+      include: {
+        doctor: {
+          include: {
+            user: true,
+          },
+        },
+        patient: true,
+      },
+    });
+
+    if (!existingAppointment) {
+      return NextResponse.json(
+        { error: "Appointment not found" },
+        { status: 404 }
+      );
+    }
+
+    // Authorization check: Doctors can only update appointments where they are the assigned doctor
+    if (session.user.role === "DOCTOR") {
+      const doctor = await prisma.doctor.findUnique({
+        where: { userId: session.user.id },
+      });
+
+      if (!doctor || doctor.id !== existingAppointment.doctorId) {
+        return NextResponse.json(
+          { error: "Forbidden. You can only manage appointments where you are the assigned doctor." },
+          { status: 403 }
+        );
+      }
+    } else if (session.user.role === "PATIENT") {
+      // Patients can only update their own appointments
+      if (existingAppointment.patientId !== session.user.id) {
+        return NextResponse.json(
+          { error: "Forbidden. You can only manage your own appointments." },
+          { status: 403 }
+        );
+      }
+    }
+    // ADMIN can update any appointment
 
     const updateData: {
       status?: AppointmentStatus;
@@ -333,6 +389,22 @@ export async function PATCH(request: NextRequest) {
           cancelReason: cancelReason || undefined,
         },
       });
+    } else if (statusParam === "CONFIRMED") {
+      await createNotification({
+        userId: appointment.patientId,
+        appointmentId: appointment.id,
+        type: "BOOKING_CONFIRMATION",
+        title: "Appointment Confirmed",
+        message: `Your appointment has been confirmed for ${appointment.appointmentDate.toLocaleDateString()} at ${appointment.timeSlot}`,
+        sendEmail: true,
+        emailData: {
+          patientName: appointment.patient.name,
+          doctorName: appointment.doctor.user.name,
+          appointmentDate: appointment.appointmentDate,
+          timeSlot: appointment.timeSlot,
+          reason: appointment.reason || undefined,
+        },
+      });
     } else if (appointmentDate || timeSlot) {
       await createNotification({
         userId: appointment.patientId,
@@ -357,6 +429,111 @@ export async function PATCH(request: NextRequest) {
     console.error("Error updating appointment:", error);
     return NextResponse.json(
       { error: "Failed to update appointment" },
+      { status: 500 }
+    );
+  }
+}
+
+// DELETE an appointment
+export async function DELETE(request: NextRequest) {
+  try {
+    const session = await auth.api.getSession({
+      headers: await headers(),
+    });
+
+    if (!session) {
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401 }
+      );
+    }
+
+    const searchParams = request.nextUrl.searchParams;
+    const appointmentId = searchParams.get("appointmentId");
+
+    if (!appointmentId) {
+      return NextResponse.json(
+        { error: "Appointment ID is required" },
+        { status: 400 }
+      );
+    }
+
+    // Get the appointment first to check authorization
+    const existingAppointment = await prisma.appointment.findUnique({
+      where: { id: appointmentId },
+      include: {
+        doctor: {
+          include: {
+            user: true,
+          },
+        },
+        patient: true,
+      },
+    });
+
+    if (!existingAppointment) {
+      return NextResponse.json(
+        { error: "Appointment not found" },
+        { status: 404 }
+      );
+    }
+
+    // Authorization check
+    if (session.user.role === "DOCTOR") {
+      const doctor = await prisma.doctor.findUnique({
+        where: { userId: session.user.id },
+      });
+
+      if (!doctor || doctor.id !== existingAppointment.doctorId) {
+        return NextResponse.json(
+          { error: "Forbidden. You can only delete appointments where you are the assigned doctor." },
+          { status: 403 }
+        );
+      }
+    } else if (session.user.role === "PATIENT") {
+      // Patients can only delete their own appointments
+      if (existingAppointment.patientId !== session.user.id) {
+        return NextResponse.json(
+          { error: "Forbidden. You can only delete your own appointments." },
+          { status: 403 }
+        );
+      }
+    }
+    // ADMIN can delete any appointment
+
+    // Delete the appointment
+    await prisma.appointment.delete({
+      where: { id: appointmentId },
+    });
+
+    // Create notification for the other party
+    const { createNotification } = await import("@/lib/notifications");
+    const notifyUserId = session.user.role === "PATIENT" 
+      ? existingAppointment.doctor.userId 
+      : existingAppointment.patientId;
+
+    await createNotification({
+      userId: notifyUserId,
+      type: "CANCELLATION",
+      title: "Appointment Deleted",
+      message: `An appointment scheduled for ${existingAppointment.appointmentDate.toLocaleDateString()} at ${existingAppointment.timeSlot} has been deleted.`,
+      sendEmail: true,
+      emailData: {
+        patientName: existingAppointment.patient.name,
+        doctorName: existingAppointment.doctor.user.name,
+        appointmentDate: existingAppointment.appointmentDate,
+        timeSlot: existingAppointment.timeSlot,
+      },
+    });
+
+    return NextResponse.json(
+      { message: "Appointment deleted successfully" },
+      { status: 200 }
+    );
+  } catch (error) {
+    console.error("Error deleting appointment:", error);
+    return NextResponse.json(
+      { error: "Failed to delete appointment" },
       { status: 500 }
     );
   }
