@@ -82,28 +82,63 @@ export function AvailabilityEditor({ doctorId, onSave }: AvailabilityEditorProps
   };
 
   const handleSave = async () => {
+    // Validate that at least one day is active
+    const activeAvailability = availability.filter((day) => day.isActive);
+    
+    if (activeAvailability.length === 0) {
+      toast.error("Please enable at least one day and set working hours");
+      return;
+    }
+
+    // Validate that all active days have valid times
+    const invalidDays = activeAvailability.filter(
+      (day) => !day.startTime || !day.endTime || day.startTime >= day.endTime
+    );
+
+    if (invalidDays.length > 0) {
+      toast.error("Please ensure all active days have valid start and end times");
+      return;
+    }
+
     setSaving(true);
     try {
-      const activeAvailability = availability.filter((day) => day.isActive);
-      
+      // Clean up break times - convert empty strings to null
+      const cleanedAvailability = activeAvailability.map((day) => ({
+        ...day,
+        breakStart: day.breakStart && day.breakStart.trim() !== "" ? day.breakStart : null,
+        breakEnd: day.breakEnd && day.breakEnd.trim() !== "" ? day.breakEnd : null,
+      }));
+
       const response = await fetch("/api/doctors/availability", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           doctorId,
-          availability: activeAvailability,
+          availability: cleanedAvailability,
         }),
       });
 
       if (!response.ok) {
-        throw new Error("Failed to save availability");
+        const errorData = await response.json().catch(() => ({ error: "Failed to save availability" }));
+        const errorMessage = errorData.details || errorData.error || "Failed to save availability";
+        throw new Error(errorMessage);
       }
 
       toast.success("Availability saved successfully");
       onSave?.();
+      
+      // Refresh the availability list
+      const fetchResponse = await fetch(`/api/doctors/availability?doctorId=${doctorId}`);
+      if (fetchResponse.ok) {
+        const data = await fetchResponse.json();
+        if (data.availability && data.availability.length > 0) {
+          setAvailability(data.availability);
+        }
+      }
     } catch (error) {
       console.error("Error saving availability:", error);
-      toast.error("Failed to save availability");
+      const errorMessage = error instanceof Error ? error.message : "Failed to save availability";
+      toast.error(errorMessage);
     } finally {
       setSaving(false);
     }
