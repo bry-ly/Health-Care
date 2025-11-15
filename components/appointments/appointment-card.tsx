@@ -16,7 +16,11 @@ interface AppointmentCardProps {
   reason?: string | null;
   onReschedule?: (id: string) => void;
   onCancel?: (id: string) => void;
+  onDelete?: (id: string) => void;
+  onAccept?: (id: string) => void;
+  onReject?: (id: string) => void;
   showActions?: boolean;
+  isDoctorView?: boolean;
 }
 
 const statusColors: Record<AppointmentStatus, string> = {
@@ -46,14 +50,20 @@ export function AppointmentCard({
   reason,
   onReschedule,
   onCancel,
+  onDelete,
+  onAccept,
+  onReject,
   showActions = true,
+  isDoctorView = false,
 }: AppointmentCardProps) {
   return (
     <Card>
       <CardHeader>
         <div className="flex items-start justify-between">
           <div className="space-y-1">
-            <CardTitle className="text-lg">{doctorName}</CardTitle>
+            <CardTitle className="text-lg">
+              {isDoctorView ? `Patient: ${doctorName}` : doctorName}
+            </CardTitle>
             <CardDescription>
               <div className="flex items-center gap-2 mt-2">
                 <IconCalendar className="h-4 w-4" />
@@ -78,25 +88,61 @@ export function AppointmentCard({
           </div>
         </CardContent>
       )}
-      {showActions && (status === "PENDING" || status === "CONFIRMED") && (
+      {showActions && (
         <CardContent className="flex gap-2 pt-0">
-          {onReschedule && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => onReschedule(id)}
-            >
-              Reschedule
-            </Button>
-          )}
-          {onCancel && (
-            <Button
-              variant="destructive"
-              size="sm"
-              onClick={() => onCancel(id)}
-            >
-              Cancel
-            </Button>
+          {isDoctorView && status === "PENDING" ? (
+            <>
+              {onAccept && (
+                <Button
+                  variant="default"
+                  size="sm"
+                  onClick={() => onAccept(id)}
+                  className="flex-1"
+                >
+                  Accept
+                </Button>
+              )}
+              {onReject && (
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => onReject(id)}
+                  className="flex-1"
+                >
+                  Reject
+                </Button>
+              )}
+            </>
+          ) : (
+            <>
+              {onReschedule && (status === "PENDING" || status === "CONFIRMED") && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => onReschedule(id)}
+                >
+                  Reschedule
+                </Button>
+              )}
+              {onCancel && (status === "PENDING" || status === "CONFIRMED") && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => onCancel(id)}
+                >
+                  Cancel
+                </Button>
+              )}
+              {onDelete && (
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => onDelete(id)}
+                >
+                  Delete
+                </Button>
+              )}
+            </>
           )}
         </CardContent>
       )}
