@@ -13,19 +13,127 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum UserRole {
+  PATIENT
+  DOCTOR
+  ADMIN
+}
+
+enum AppointmentStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+  RESCHEDULED
+  MISSED
+}
+
+enum NotificationType {
+  APPOINTMENT_REMINDER
+  BOOKING_CONFIRMATION
+  CANCELLATION
+  RESCHEDULE
+  NEW_BOOKING
+}
+
 model User {
   id            String    @id
   name          String
   email         String
   emailVerified Boolean   @default(false)
   image         String?
+  role          UserRole  @default(PATIENT)
+  phone         String?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @default(now()) @updatedAt
   sessions      Session[]
   accounts      Account[]
+  
+  // Patient-specific relations
+  patientAppointments Appointment[] @relation("PatientAppointments")
+  notifications       Notification[]
+  
+  // Doctor-specific relations
+  doctorProfile       Doctor?
+  doctorAppointments  Appointment[] @relation("DoctorAppointments")
 
   @@unique([email])
   @@map("user")
+}
+
+model Doctor {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  specialization  String
+  licenseNumber   String   @unique
+  bio             String?
+  experience      Int      @default(0) // Years of experience
+  consultationFee Decimal  @default(0)
+  isAvailable     Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  availability    DoctorAvailability[]
+  appointments    Appointment[]
+  
+  @@map("doctor")
+}
+
+model DoctorAvailability {
+  id          String   @id @default(cuid())
+  doctorId    String
+  doctor      Doctor   @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  dayOfWeek   Int      // 0 = Sunday, 6 = Saturday
+  startTime   String   // Format: "HH:MM"
+  endTime     String   // Format: "HH:MM"
+  breakStart  String?  // Format: "HH:MM"
+  breakEnd    String?  // Format: "HH:MM"
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@map("doctor_availability")
+}
+
+model Appointment {
+  id              String            @id @default(cuid())
+  patientId       String
+  patient         User              @relation("PatientAppointments", fields: [patientId], references: [id], onDelete: Cascade)
+  doctorId        String
+  doctor          Doctor            @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  appointmentDate DateTime
+  timeSlot        String            // Format: "HH:MM"
+  duration        Int               @default(30) // Duration in minutes
+  status          AppointmentStatus @default(PENDING)
+  reason          String?
+  notes           String?
+  cancelReason    String?
+  assignedDoctor  User?             @relation("DoctorAppointments", fields: [assignedDoctorId], references: [id])
+  assignedDoctorId String?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  
+  notifications   Notification[]
+  
+  @@map("appointment")
+}
+
+model Notification {
+  id             String           @id @default(cuid())
+  userId         String
+  user           User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  appointmentId  String?
+  appointment    Appointment?     @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+  type           NotificationType
+  title          String
+  message        String
+  isRead         Boolean          @default(false)
+  sentAt         DateTime         @default(now())
+  emailSent      Boolean          @default(false)
+  createdAt      DateTime         @default(now())
+  
+  @@map("notification")
 }
 
 model Session {
