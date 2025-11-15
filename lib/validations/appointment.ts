@@ -21,12 +21,27 @@ export const cancelAppointmentSchema = z.object({
 });
 
 export const availabilitySchema = z.object({
-  doctorId: z.string().min(1, "Doctor ID is required"),
   dayOfWeek: z.number().int().min(0).max(6),
   startTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, "Invalid time format (HH:MM)"),
   endTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, "Invalid time format (HH:MM)"),
-  breakStart: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, "Invalid time format (HH:MM)").optional().nullable(),
-  breakEnd: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, "Invalid time format (HH:MM)").optional().nullable(),
+  breakStart: z
+    .union([
+      z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, "Invalid time format (HH:MM)"),
+      z.literal(""),
+      z.null(),
+    ])
+    .optional()
+    .nullable()
+    .transform((val) => (val === "" ? null : val)),
+  breakEnd: z
+    .union([
+      z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, "Invalid time format (HH:MM)"),
+      z.literal(""),
+      z.null(),
+    ])
+    .optional()
+    .nullable()
+    .transform((val) => (val === "" ? null : val)),
   isActive: z.boolean().default(true),
 });
 
