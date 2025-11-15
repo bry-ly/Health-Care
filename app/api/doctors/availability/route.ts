@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { auth } from "@/lib/auth";
+import { headers } from "next/headers";
 import { weeklyAvailabilitySchema } from "@/lib/validations/appointment";
+import { ZodError } from "zod";
 
 // GET doctor's availability
 export async function GET(request: NextRequest) {
@@ -62,6 +65,17 @@ export async function GET(request: NextRequest) {
 // POST/PUT create or update availability schedule
 export async function POST(request: NextRequest) {
   try {
+    const session = await auth.api.getSession({
+      headers: await headers(),
+    });
+
+    if (!session) {
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401 }
+      );
+    }
+
     const body = await request.json();
     const validated = weeklyAvailabilitySchema.parse(body);
     const { doctorId, availability } = validated;
@@ -69,12 +83,23 @@ export async function POST(request: NextRequest) {
     // Verify doctor exists
     const doctor = await prisma.doctor.findUnique({
       where: { id: doctorId },
+      include: {
+        user: true,
+      },
     });
 
     if (!doctor) {
       return NextResponse.json(
         { error: "Doctor not found" },
         { status: 404 }
+      );
+    }
+
+    // Check authorization: Only the doctor themselves or an admin can update availability
+    if (session.user.role !== "ADMIN" && doctor.userId !== session.user.id) {
+      return NextResponse.json(
+        { error: "Forbidden. You can only update your own availability." },
+        { status: 403 }
       );
     }
 
@@ -106,12 +131,22 @@ export async function POST(request: NextRequest) {
     );
   } catch (error) {
     console.error("Error creating availability:", error);
-    if (error instanceof Error && error.name === "ZodError") {
+    
+    // Handle Zod validation errors
+    if (error instanceof ZodError) {
+      const errorMessages = error.issues.map((issue) => {
+        const field = issue.path.join(".");
+        return `${field}: ${issue.message}`;
+      });
       return NextResponse.json(
-        { error: "Invalid input data", details: error },
+        { 
+          error: "Validation failed", 
+          details: errorMessages.join(", ") 
+        },
         { status: 400 }
       );
     }
+    
     return NextResponse.json(
       { error: "Failed to create availability" },
       { status: 500 }

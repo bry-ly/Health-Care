@@ -16,7 +16,9 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const appointmentDate = new Date(date);
+    // Parse date string (format: YYYY-MM-DD)
+    const [year, month, day] = date.split("-").map(Number);
+    const appointmentDate = new Date(year, month - 1, day);
     const dayOfWeek = appointmentDate.getDay(); // 0 = Sunday, 6 = Saturday
 
     // Get doctor's availability for this day
@@ -30,18 +32,27 @@ export async function GET(request: NextRequest) {
 
     if (!doctorAvailability) {
       return NextResponse.json(
-        { availableSlots: [], message: "Doctor is not available on this day" },
+        { 
+          availableSlots: [], 
+          message: "Doctor has not set availability for this day. Please contact the doctor or check back later." 
+        },
         { status: 200 }
       );
     }
+
+    // Create date boundaries for the appointment date (fix mutation issue)
+    const startOfDay = new Date(appointmentDate);
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date(appointmentDate);
+    endOfDay.setHours(23, 59, 59, 999);
 
     // Get existing appointments for this date
     const existingAppointments = await prisma.appointment.findMany({
       where: {
         doctorId,
         appointmentDate: {
-          gte: new Date(appointmentDate.setHours(0, 0, 0, 0)),
-          lt: new Date(appointmentDate.setHours(23, 59, 59, 999)),
+          gte: startOfDay,
+          lte: endOfDay,
         },
         status: {
           notIn: ["CANCELLED"],
