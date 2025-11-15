@@ -53,7 +53,7 @@ export function useDoctor(doctorId: string) {
         throw new Error("Failed to fetch doctor");
       }
       const data = await response.json();
-      return data.doctor as Doctor;
+      return data.doctors?.[0] as Doctor | undefined;
     },
     enabled: !!doctorId,
   });

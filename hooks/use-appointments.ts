@@ -108,6 +108,22 @@ export function useAppointments({ userId, role, status, date }: UseAppointmentsO
     },
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: async (appointmentId: string) => {
+      const response = await fetch(`/api/appointments?appointmentId=${appointmentId}`, {
+        method: "DELETE",
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to delete appointment");
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["appointments"] });
+    },
+  });
+
   return {
     appointments: query.data || [],
     isLoading: query.isLoading,
@@ -115,8 +131,10 @@ export function useAppointments({ userId, role, status, date }: UseAppointmentsO
     refetch: query.refetch,
     createAppointment: createMutation.mutate,
     updateAppointment: updateMutation.mutate,
+    deleteAppointment: deleteMutation.mutate,
     isCreating: createMutation.isPending,
     isUpdating: updateMutation.isPending,
+    isDeleting: deleteMutation.isPending,
   };
 }
 
