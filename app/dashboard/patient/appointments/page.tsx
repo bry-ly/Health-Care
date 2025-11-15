@@ -24,12 +24,13 @@ export default function PatientAppointmentsPage() {
   const { data: session } = useSession();
   const [rescheduleAppointmentId, setRescheduleAppointmentId] = useState<string | null>(null);
   const [cancelAppointmentId, setCancelAppointmentId] = useState<string | null>(null);
+  const [deleteAppointmentId, setDeleteAppointmentId] = useState<string | null>(null);
   const [rescheduleDate, setRescheduleDate] = useState<Date | null>(null);
   const [rescheduleTime, setRescheduleTime] = useState<string>("");
   const [cancelReason, setCancelReason] = useState<string>("");
   const [selectedDoctorId, setSelectedDoctorId] = useState<string>("");
 
-  const { appointments, isLoading, updateAppointment, isUpdating } = useAppointments({
+  const { appointments, isLoading, updateAppointment, deleteAppointment, isUpdating, isDeleting } = useAppointments({
     userId: session?.user?.id || "",
     role: "patient",
   });
@@ -110,6 +111,24 @@ export default function PatientAppointmentsPage() {
     }
   };
 
+  const handleDelete = (appointmentId: string) => {
+    setDeleteAppointmentId(appointmentId);
+  };
+
+  const handleDeleteSubmit = async () => {
+    if (!deleteAppointmentId) return;
+
+    try {
+      await deleteAppointment(deleteAppointmentId);
+      toast.success("Appointment deleted successfully");
+      setDeleteAppointmentId(null);
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Failed to delete appointment"
+      );
+    }
+  };
+
   if (!session) {
     return (
       <div className="flex h-screen items-center justify-center">
@@ -164,6 +183,7 @@ export default function PatientAppointmentsPage() {
                         reason={appointment.reason}
                         onReschedule={handleReschedule}
                         onCancel={handleCancel}
+                        onDelete={handleDelete}
                       />
                     ))}
                   </div>
@@ -190,7 +210,8 @@ export default function PatientAppointmentsPage() {
                         timeSlot={appointment.timeSlot}
                         status={appointment.status}
                         reason={appointment.reason}
-                        showActions={false}
+                        showActions={true}
+                        onDelete={handleDelete}
                       />
                     ))}
                   </div>
@@ -325,6 +346,41 @@ export default function PatientAppointmentsPage() {
                     disabled={!cancelReason.trim() || isUpdating}
                   >
                     {isUpdating ? "Cancelling..." : "Cancel Appointment"}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+
+            {/* Delete Confirmation Dialog */}
+            <Dialog
+              open={!!deleteAppointmentId}
+              onOpenChange={(open) => {
+                if (!open) {
+                  setDeleteAppointmentId(null);
+                }
+              }}
+            >
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Delete Appointment</DialogTitle>
+                  <DialogDescription>
+                    Are you sure you want to permanently delete this appointment? This action cannot be undone.
+                  </DialogDescription>
+                </DialogHeader>
+                <DialogFooter>
+                  <Button
+                    variant="outline"
+                    onClick={() => setDeleteAppointmentId(null)}
+                    disabled={isDeleting}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    onClick={handleDeleteSubmit}
+                    disabled={isDeleting}
+                  >
+                    {isDeleting ? "Deleting..." : "Delete"}
                   </Button>
                 </DialogFooter>
               </DialogContent>
