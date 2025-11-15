@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useSession } from "@/lib/auth-client";
 import { useRouter } from "next/navigation";
 import { AppSidebar } from "@/components/dashboard/doctor/app-sidebar";
@@ -36,6 +36,8 @@ export default function DoctorAddAppointmentPage() {
   const [patientId, setPatientId] = useState<string>("");
   const [isLoadingProfile, setIsLoadingProfile] = useState(true);
   const [profileCheckAttempts, setProfileCheckAttempts] = useState(0);
+  const hasShownAccessDenied = useRef(false);
+  const hasShownProfileToast = useRef<string | null>(null);
 
   const userRole = (session?.user as any)?.role as string | undefined;
   const { createAppointment, isCreating } = useAppointments({
@@ -50,8 +52,11 @@ export default function DoctorAddAppointmentPage() {
     const currentUserRole = (session.user as any)?.role as string | undefined;
     
     if (currentUserRole !== "DOCTOR" && currentUserRole !== "ADMIN") {
-      toast.error("Access denied. Only doctors and admins can create appointments.");
-      router.push("/dashboard");
+      if (!hasShownAccessDenied.current) {
+        hasShownAccessDenied.current = true;
+        toast.error("Access denied. Only doctors and admins can create appointments.");
+        router.push("/dashboard");
+      }
       return;
     }
 
@@ -59,6 +64,12 @@ export default function DoctorAddAppointmentPage() {
       if (!session.user.id) {
         setIsLoadingProfile(false);
         return;
+      }
+      
+      // Reset toast flags when user changes
+      const currentUserId = session.user.id;
+      if (hasShownProfileToast.current !== currentUserId) {
+        hasShownProfileToast.current = null;
       }
       
       setIsLoadingProfile(true);
@@ -78,12 +89,18 @@ export default function DoctorAddAppointmentPage() {
               const doctor = data.doctors[0];
               console.log("Found doctor profile:", doctor.id);
               setDoctorId(doctor.id);
-              toast.success("Doctor profile loaded successfully");
+              if (hasShownProfileToast.current !== "success") {
+                hasShownProfileToast.current = "success";
+                toast.success("Doctor profile loaded successfully");
+              }
             } else {
               // Profile doesn't exist
               console.warn("Doctor profile not found for userId:", session.user.id);
               setDoctorId(""); // Explicitly clear doctorId
-              toast.warning("Doctor profile not found. Please complete your profile.");
+              if (hasShownProfileToast.current !== "warning") {
+                hasShownProfileToast.current = "warning";
+                toast.warning("Doctor profile not found. Please complete your profile.");
+              }
             }
           } else {
             const errorData = await response.json().catch(() => ({}));

@@ -5,32 +5,42 @@ import { AppSidebar } from "@/components/dashboard/doctor/app-sidebar";
 import { SiteHeader } from "@/components/dashboard/site-header";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { AvailabilityEditor } from "@/components/doctors/availability-editor";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Spinner } from "@/components/ui/spinner";
 import { toast } from "sonner";
 
 export default function DoctorAvailabilityPage() {
   const { data: session } = useSession();
   const [doctorId, setDoctorId] = useState<string>("");
+  const hasShownError = useRef<string | null>(null);
 
   // First, get doctor profile for this user
   useEffect(() => {
     const fetchDoctorProfile = async () => {
       if (!session?.user?.id) return;
 
+      const currentUserId = session.user.id;
+      
       try {
         const response = await fetch(`/api/doctors?userId=${session.user.id}`);
         if (response.ok) {
           const data = await response.json();
           if (data.doctors && data.doctors.length > 0) {
             setDoctorId(data.doctors[0].id);
+            hasShownError.current = null; // Reset on success
           } else {
-            toast.error("Doctor profile not found. Please contact admin.");
+            if (hasShownError.current !== "not-found") {
+              hasShownError.current = "not-found";
+              toast.error("Doctor profile not found. Please contact admin.");
+            }
           }
         }
       } catch (error) {
         console.error("Error fetching doctor profile:", error);
-        toast.error("Failed to load doctor profile");
+        if (hasShownError.current !== "fetch-error") {
+          hasShownError.current = "fetch-error";
+          toast.error("Failed to load doctor profile");
+        }
       }
     };
 
@@ -80,7 +90,8 @@ export default function DoctorAvailabilityPage() {
             <AvailabilityEditor
               doctorId={doctorId}
               onSave={() => {
-                toast.success("Availability updated successfully");
+                // Toast is already shown in AvailabilityEditor component
+                // No need to show it again here
               }}
             />
           </div>
