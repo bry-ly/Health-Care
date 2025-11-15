@@ -44,8 +44,9 @@ export default function AdminStaffPage() {
       const response = await fetch("/api/admin/users");
       if (response.ok) {
         const data = await response.json();
+        // Include both ADMIN and DOCTOR roles as staff
         const staffUsers = (data.users || []).filter(
-          (user: { role: string }) => user.role === "ADMIN"
+          (user: { role: string }) => user.role === "ADMIN" || user.role === "DOCTOR"
         );
         setStaff(staffUsers);
       }
@@ -74,7 +75,7 @@ export default function AdminStaffPage() {
             <div className="flex flex-col gap-2">
               <h1 className="text-3xl font-bold">Staff</h1>
               <p className="text-muted-foreground">
-                Manage and view all administrative staff
+                Manage and view all staff members (Admins and Doctors)
               </p>
             </div>
 
@@ -82,7 +83,7 @@ export default function AdminStaffPage() {
               <CardHeader>
                 <CardTitle>All Staff ({staff.length})</CardTitle>
                 <CardDescription>
-                  Complete list of administrative staff members
+                  Complete list of administrative staff and doctors
                 </CardDescription>
               </CardHeader>
               <CardContent>
