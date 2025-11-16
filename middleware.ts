@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
 
 export async function middleware(request: NextRequest) {
@@ -12,8 +11,9 @@ export async function middleware(request: NextRequest) {
   }
 
   // Check session for protected routes
+  // In middleware, pass request headers directly, not using headers() function
   const session = await auth.api.getSession({
-    headers: await headers(),
+    headers: request.headers,
   });
 
   if (!session) {
