@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -26,7 +25,6 @@ export function LoginForm({
   className,
   ...props
 }: React.ComponentProps<"div">) {
-  const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
@@ -53,8 +51,9 @@ export function LoginForm({
 
       toast.success("Login successful!");
 
-      // Redirect to /dashboard - middleware will handle role-based redirect
-      router.push("/dashboard");
+      // Use window.location.href for full page reload to ensure session cookie is set
+      // Middleware will handle role-based redirect from /dashboard
+      window.location.href = "/dashboard";
     } catch (error: unknown) {
       console.error("Login error:", error);
       const errorMessage =
