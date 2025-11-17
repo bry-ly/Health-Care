@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
@@ -23,6 +24,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Calendar } from "@/components/ui/calendar";
 import { TimeSlotPicker } from "@/components/appointments/time-slot-picker";
 import { useDoctors } from "@/hooks/use-doctors";
@@ -32,6 +34,7 @@ import { format } from "date-fns";
 import { Spinner } from "@/components/ui/spinner";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { IconCalendar } from "@tabler/icons-react";
+import { formatPhoneInput, cleanPhonePH, formatPhonePH } from "@/lib/phone-utils";
 
 export default function BookAppointmentPage() {
   const { data: session } = useSession();
@@ -40,7 +43,20 @@ export default function BookAppointmentPage() {
   const [selectedDoctor, setSelectedDoctor] = useState<string>("");
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [selectedTime, setSelectedTime] = useState<string>("");
+  const [appointmentType, setAppointmentType] = useState<string>("CONSULTATION");
+  const [urgencyLevel, setUrgencyLevel] = useState<string>("ROUTINE");
+  const [duration, setDuration] = useState<number>(30);
   const [reason, setReason] = useState<string>("");
+  const [symptoms, setSymptoms] = useState<string>("");
+  const [patientPhone, setPatientPhone] = useState<string>(
+    session?.user?.phone ? formatPhonePH(session.user.phone) : ""
+  );
+  const [patientEmail, setPatientEmail] = useState<string>(session?.user?.email || "");
+  const [insuranceProvider, setInsuranceProvider] = useState<string>("");
+  const [insurancePolicyNumber, setInsurancePolicyNumber] = useState<string>("");
+  const [emergencyContactName, setEmergencyContactName] = useState<string>("");
+  const [emergencyContactPhone, setEmergencyContactPhone] = useState<string>("");
+  const [isFollowUp, setIsFollowUp] = useState<boolean>(false);
 
   const { data: doctors = [], isLoading: doctorsLoading } = useDoctors(
     selectedSpecialization === "all" ? undefined : selectedSpecialization
@@ -63,8 +79,8 @@ export default function BookAppointmentPage() {
       return;
     }
 
-    if (!selectedDoctor || !selectedDate || !selectedTime) {
-      toast.error("Please fill in all required fields");
+    if (!selectedDoctor || !selectedDate || !selectedTime || !patientPhone.trim() || !patientEmail.trim()) {
+      toast.error("Please fill in all required fields (Doctor, Date, Time, Phone Number, and Email)");
       return;
     }
 
@@ -75,7 +91,17 @@ export default function BookAppointmentPage() {
         appointmentDate: selectedDate.toISOString(),
         timeSlot: selectedTime,
         reason: reason || undefined,
-        duration: 30,
+        symptoms: symptoms || undefined,
+        duration: duration,
+        appointmentType: appointmentType as any,
+        urgencyLevel: urgencyLevel as any,
+        patientPhone: patientPhone ? cleanPhonePH(patientPhone) : undefined,
+        patientEmail: patientEmail || undefined,
+        insuranceProvider: insuranceProvider || undefined,
+        insurancePolicyNumber: insurancePolicyNumber || undefined,
+        emergencyContactName: emergencyContactName || undefined,
+        emergencyContactPhone: emergencyContactPhone ? cleanPhonePH(emergencyContactPhone) : undefined,
+        isFollowUp: isFollowUp,
       });
 
       toast.success("Appointment booked successfully!");
@@ -120,7 +146,7 @@ export default function BookAppointmentPage() {
                 <CardContent>
                   <form onSubmit={handleSubmit} className="space-y-6">
                     {/* Doctor Selection Section */}
-                    <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label htmlFor="specialization" className="text-base font-medium">
                           Specialization <span className="text-destructive">*</span>
@@ -132,8 +158,8 @@ export default function BookAppointmentPage() {
                             setSelectedDoctor("");
                           }}
                         >
-                          <SelectTrigger id="specialization" className="h-11">
-                            <SelectValue placeholder="Select specialization" />
+                          <SelectTrigger id="specialization" className="h-11 w-full">
+                            <SelectValue placeholder="Select specialization" className="truncate" />
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="all">All Specializations</SelectItem>
@@ -147,7 +173,7 @@ export default function BookAppointmentPage() {
                       </div>
 
                       {doctorsLoading ? (
-                        <div className="flex items-center justify-center py-8">
+                        <div className="flex items-end justify-center">
                           <Spinner className="h-6 w-6" />
                         </div>
                       ) : (
@@ -160,13 +186,13 @@ export default function BookAppointmentPage() {
                             onValueChange={setSelectedDoctor}
                             disabled={!selectedSpecialization && doctors.length === 0}
                           >
-                            <SelectTrigger id="doctor" className="h-11">
-                              <SelectValue placeholder="Select a doctor" />
+                            <SelectTrigger id="doctor" className="h-11 w-full">
+                              <SelectValue placeholder="Select a doctor" className="truncate" />
                             </SelectTrigger>
                             <SelectContent>
                               {doctors.map((doctor) => (
                                 <SelectItem key={doctor.id} value={doctor.id}>
-                                  {doctor.user.name} - {doctor.specialization}
+                                  <span className="truncate block">{doctor.user.name} - {doctor.specialization}</span>
                                 </SelectItem>
                               ))}
                             </SelectContent>
@@ -228,30 +254,240 @@ export default function BookAppointmentPage() {
                       </div>
                     )}
 
-                    {/* Reason Section */}
+                    {/* Appointment Details Section */}
                     {selectedDoctor && (
-                      <div className="space-y-2 pt-4 border-t">
-                        <Label htmlFor="reason" className="text-base font-medium">
-                          Reason for Visit <span className="text-muted-foreground text-sm font-normal">(Optional)</span>
-                        </Label>
-                        <Textarea
-                          id="reason"
-                          placeholder="Brief description of your symptoms or reason for visit..."
-                          value={reason}
-                          onChange={(e) => setReason(e.target.value)}
-                          rows={4}
-                          className="resize-none"
-                        />
+                      <div className="space-y-4 pt-4 border-t">
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="appointmentType" className="text-base font-medium">
+                              Appointment Type <span className="text-destructive">*</span>
+                            </Label>
+                            <Select
+                              value={appointmentType}
+                              onValueChange={setAppointmentType}
+                            >
+                              <SelectTrigger id="appointmentType" className="h-11 w-full">
+                                <SelectValue placeholder="Select type" className="truncate" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="CONSULTATION">Consultation</SelectItem>
+                                <SelectItem value="FOLLOW_UP">Follow-up</SelectItem>
+                                <SelectItem value="CHECKUP">Checkup</SelectItem>
+                                <SelectItem value="EMERGENCY">Emergency</SelectItem>
+                                <SelectItem value="SURGERY">Surgery</SelectItem>
+                                <SelectItem value="TEST">Test/Procedure</SelectItem>
+                                <SelectItem value="OTHER">Other</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label htmlFor="duration" className="text-base font-medium">
+                              Duration (minutes) <span className="text-destructive">*</span>
+                            </Label>
+                            <Select
+                              value={duration.toString()}
+                              onValueChange={(value) => setDuration(parseInt(value))}
+                            >
+                              <SelectTrigger id="duration" className="h-11 w-full">
+                                <SelectValue placeholder="Select duration" className="truncate" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="15">15 minutes</SelectItem>
+                                <SelectItem value="30">30 minutes</SelectItem>
+                                <SelectItem value="45">45 minutes</SelectItem>
+                                <SelectItem value="60">60 minutes</SelectItem>
+                                <SelectItem value="90">90 minutes</SelectItem>
+                                <SelectItem value="120">120 minutes</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="urgencyLevel" className="text-base font-medium">
+                            Urgency Level <span className="text-destructive">*</span>
+                          </Label>
+                          <Select
+                            value={urgencyLevel}
+                            onValueChange={setUrgencyLevel}
+                          >
+                            <SelectTrigger id="urgencyLevel" className="h-11 w-full">
+                              <SelectValue placeholder="Select urgency level" className="truncate" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="ROUTINE">Routine</SelectItem>
+                              <SelectItem value="URGENT">Urgent</SelectItem>
+                              <SelectItem value="EMERGENCY">Emergency</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id="isFollowUp"
+                            checked={isFollowUp}
+                            onCheckedChange={(checked) => setIsFollowUp(checked === true)}
+                          />
+                          <Label htmlFor="isFollowUp" className="text-sm font-normal cursor-pointer">
+                            This is a follow-up appointment
+                          </Label>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Reason and Symptoms Section */}
+                    {selectedDoctor && (
+                      <div className="space-y-4 pt-4 border-t">
+                        <div className="space-y-2">
+                          <Label htmlFor="reason" className="text-base font-medium">
+                            Reason for Visit <span className="text-muted-foreground text-sm font-normal">(Optional)</span>
+                          </Label>
+                          <Textarea
+                            id="reason"
+                            placeholder="Brief description of why you need this appointment..."
+                            value={reason}
+                            onChange={(e) => setReason(e.target.value)}
+                            rows={3}
+                            className="resize-none"
+                          />
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="symptoms" className="text-base font-medium">
+                            Symptoms or Concerns <span className="text-muted-foreground text-sm font-normal">(Optional)</span>
+                          </Label>
+                          <Textarea
+                            id="symptoms"
+                            placeholder="Describe any symptoms, pain levels, or concerns you're experiencing..."
+                            value={symptoms}
+                            onChange={(e) => setSymptoms(e.target.value)}
+                            rows={4}
+                            className="resize-none"
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Patient Contact Information */}
+                    {selectedDoctor && (
+                      <div className="space-y-4 pt-4 border-t">
+                        <h3 className="text-base font-semibold">Contact Information</h3>
+                        <div className="grid gap-4 md:grid-cols-2">
+                          <div className="space-y-2">
+                            <Label htmlFor="patientPhone" className="text-base font-medium">
+                              Phone Number <span className="text-destructive">*</span>
+                            </Label>
+                            <Input
+                              id="patientPhone"
+                              type="tel"
+                              placeholder="09XX XXX XXXX or 02X XXX XXXX"
+                              value={patientPhone}
+                              onChange={(e) => setPatientPhone(formatPhoneInput(e.target.value))}
+                              required
+                              className="h-11"
+                              maxLength={13}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="patientEmail" className="text-base font-medium">
+                              Email Address <span className="text-destructive">*</span>
+                            </Label>
+                            <Input
+                              id="patientEmail"
+                              type="email"
+                              placeholder="your.email@example.com"
+                              value={patientEmail}
+                              onChange={(e) => setPatientEmail(e.target.value)}
+                              required
+                              className="h-11"
+                            />
+                          </div>
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          We'll use these to confirm your appointment and send reminders
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Insurance Information */}
+                    {selectedDoctor && (
+                      <div className="space-y-4 pt-4 border-t">
+                        <h3 className="text-base font-semibold">Insurance Information <span className="text-muted-foreground text-sm font-normal">(Optional)</span></h3>
+                        <div className="grid gap-4 md:grid-cols-2">
+                          <div className="space-y-2">
+                            <Label htmlFor="insuranceProvider" className="text-base font-medium">
+                              Insurance Provider
+                            </Label>
+                            <Input
+                              id="insuranceProvider"
+                              type="text"
+                              placeholder="e.g., Blue Cross Blue Shield"
+                              value={insuranceProvider}
+                              onChange={(e) => setInsuranceProvider(e.target.value)}
+                              className="h-11"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="insurancePolicyNumber" className="text-base font-medium">
+                              Policy Number
+                            </Label>
+                            <Input
+                              id="insurancePolicyNumber"
+                              type="text"
+                              placeholder="Policy number"
+                              value={insurancePolicyNumber}
+                              onChange={(e) => setInsurancePolicyNumber(e.target.value)}
+                              className="h-11"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Emergency Contact */}
+                    {selectedDoctor && (
+                      <div className="space-y-4 pt-4 border-t">
+                        <h3 className="text-base font-semibold">Emergency Contact <span className="text-muted-foreground text-sm font-normal">(Optional)</span></h3>
+                        <div className="grid gap-4 md:grid-cols-2">
+                          <div className="space-y-2">
+                            <Label htmlFor="emergencyContactName" className="text-base font-medium">
+                              Contact Name
+                            </Label>
+                            <Input
+                              id="emergencyContactName"
+                              type="text"
+                              placeholder="Full name"
+                              value={emergencyContactName}
+                              onChange={(e) => setEmergencyContactName(e.target.value)}
+                              className="h-11"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="emergencyContactPhone" className="text-base font-medium">
+                              Contact Phone
+                            </Label>
+                            <Input
+                              id="emergencyContactPhone"
+                              type="tel"
+                              placeholder="09XX XXX XXXX or 02X XXX XXXX"
+                              value={emergencyContactPhone}
+                              onChange={(e) => setEmergencyContactPhone(formatPhoneInput(e.target.value))}
+                              className="h-11"
+                              maxLength={13}
+                            />
+                          </div>
+                        </div>
                       </div>
                     )}
 
                     {/* Form Actions */}
-                    <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t">
+                    <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t justify-center">
                       <Button
                         type="button"
                         variant="outline"
                         onClick={() => router.back()}
-                        className="flex-1 sm:flex-initial"
+                        className="flex-1 sm:flex-initial sm:min-w-[120px]"
                       >
                         Cancel
                       </Button>
@@ -263,7 +499,7 @@ export default function BookAppointmentPage() {
                           !selectedTime ||
                           isCreating
                         }
-                        className="flex-1 sm:flex-initial"
+                        className="flex-1 sm:flex-initial sm:min-w-[160px]"
                       >
                         {isCreating ? "Booking..." : "Book Appointment"}
                       </Button>

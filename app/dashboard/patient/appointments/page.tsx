@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useSession } from "@/lib/auth-client";
 import { AppSidebar } from "@/components/dashboard/patient/app-sidebar";
 import { SiteHeader } from "@/components/dashboard/site-header";
@@ -10,13 +10,21 @@ import { AppointmentCard } from "@/components/appointments/appointment-card";
 import { useAppointments } from "@/hooks/use-appointments";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Calendar } from "@/components/ui/calendar";
 import { TimeSlotPicker } from "@/components/appointments/time-slot-picker";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { format } from "date-fns";
-import { IconCalendar } from "@tabler/icons-react";
+import { IconCalendar, IconSearch, IconX } from "@tabler/icons-react";
 import { toast } from "sonner";
 import { Spinner } from "@/components/ui/spinner";
 
@@ -29,20 +37,67 @@ export default function PatientAppointmentsPage() {
   const [rescheduleTime, setRescheduleTime] = useState<string>("");
   const [cancelReason, setCancelReason] = useState<string>("");
   const [selectedDoctorId, setSelectedDoctorId] = useState<string>("");
+  const [searchQuery, setSearchQuery] = useState<string>("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
 
   const { appointments, isLoading, updateAppointment, deleteAppointment, isUpdating, isDeleting } = useAppointments({
     userId: session?.user?.id || "",
     role: "patient",
   });
 
-  const upcomingAppointments = appointments.filter(
+  // Filter appointments based on search query and status
+  const filteredAppointments = useMemo(() => {
+    let filtered = appointments;
+
+    // Apply search filter
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter((apt) => {
+        const doctorName = apt.doctor.user.name.toLowerCase();
+        const reason = apt.reason?.toLowerCase() || "";
+        const dateStr = format(new Date(apt.appointmentDate), "MMM dd, yyyy").toLowerCase();
+        const statusStr = apt.status.toLowerCase();
+        
+        return (
+          doctorName.includes(query) ||
+          reason.includes(query) ||
+          dateStr.includes(query) ||
+          statusStr.includes(query) ||
+          apt.timeSlot.includes(query)
+        );
+      });
+    }
+
+    // Apply status filter
+    if (statusFilter !== "all") {
+      filtered = filtered.filter((apt) => apt.status === statusFilter);
+    }
+
+    return filtered;
+  }, [appointments, searchQuery, statusFilter]);
+
+  const upcomingAppointments = filteredAppointments.filter(
     (apt) =>
       new Date(apt.appointmentDate) >= new Date() &&
       apt.status !== "CANCELLED" &&
       apt.status !== "COMPLETED"
   );
 
-  const pastAppointments = appointments.filter(
+  const pastAppointments = filteredAppointments.filter(
+    (apt) =>
+      new Date(apt.appointmentDate) < new Date() ||
+      apt.status === "CANCELLED" ||
+      apt.status === "COMPLETED"
+  );
+
+  const allUpcomingAppointments = appointments.filter(
+    (apt) =>
+      new Date(apt.appointmentDate) >= new Date() &&
+      apt.status !== "CANCELLED" &&
+      apt.status !== "COMPLETED"
+  );
+
+  const allPastAppointments = appointments.filter(
     (apt) =>
       new Date(apt.appointmentDate) < new Date() ||
       apt.status === "CANCELLED" ||
@@ -151,13 +206,61 @@ export default function PatientAppointmentsPage() {
               </p>
             </div>
 
+            {/* Search and Filter Section */}
+            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+              <div className="relative flex-1 max-w-md">
+                <IconSearch className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  type="text"
+                  placeholder="Search by doctor name, date, reason, or status..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10 pr-10 h-11"
+                />
+                {searchQuery && (
+                  <button
+                    onClick={() => setSearchQuery("")}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    aria-label="Clear search"
+                  >
+                    <IconX className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                <Label htmlFor="status-filter" className="whitespace-nowrap text-sm">
+                  Filter by status:
+                </Label>
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger id="status-filter" className="w-[180px] h-11">
+                    <SelectValue placeholder="All statuses" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Statuses</SelectItem>
+                    <SelectItem value="PENDING">Pending</SelectItem>
+                    <SelectItem value="CONFIRMED">Confirmed</SelectItem>
+                    <SelectItem value="CANCELLED">Cancelled</SelectItem>
+                    <SelectItem value="COMPLETED">Completed</SelectItem>
+                    <SelectItem value="RESCHEDULED">Rescheduled</SelectItem>
+                    <SelectItem value="MISSED">Missed</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
             <Tabs defaultValue="upcoming" className="w-full">
               <TabsList>
                 <TabsTrigger value="upcoming">
-                  Upcoming ({upcomingAppointments.length})
+                  Upcoming ({allUpcomingAppointments.length})
+                  {(searchQuery || statusFilter !== "all") && (
+                    <span className="ml-1 text-xs">({upcomingAppointments.length} shown)</span>
+                  )}
                 </TabsTrigger>
                 <TabsTrigger value="past">
-                  Past ({pastAppointments.length})
+                  Past ({allPastAppointments.length})
+                  {(searchQuery || statusFilter !== "all") && (
+                    <span className="ml-1 text-xs">({pastAppointments.length} shown)</span>
+                  )}
                 </TabsTrigger>
               </TabsList>
 

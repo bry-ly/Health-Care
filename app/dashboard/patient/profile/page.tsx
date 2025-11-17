@@ -17,6 +17,8 @@ import {
 import { Spinner } from "@/components/ui/spinner";
 import { toast } from "sonner";
 import { IconUser } from "@tabler/icons-react";
+import { formatPhoneInput, formatPhonePH, cleanPhonePH } from "@/lib/phone-utils";
+import { useEffect } from "react";
 
 export default function PatientProfilePage() {
   const { data: session } = useSession();
@@ -27,16 +29,42 @@ export default function PatientProfilePage() {
     phone: "",
   });
 
+  useEffect(() => {
+    if (session?.user?.phone) {
+      setFormData(prev => ({
+        ...prev,
+        phone: formatPhonePH(session.user.phone || ""),
+      }));
+    }
+  }, [session?.user?.phone]);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.id === "phone" 
+      ? formatPhoneInput(e.target.value)
+      : e.target.value;
+    
+    setFormData({
+      ...formData,
+      [e.target.id]: value,
+    });
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSaving(true);
 
     try {
+      // Clean phone number before sending
+      const submitData = {
+        ...formData,
+        phone: formData.phone ? cleanPhonePH(formData.phone) : null,
+      };
+
       // Update profile via API
       const response = await fetch("/api/user/profile", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(submitData),
       });
 
       if (!response.ok) {
@@ -49,13 +77,6 @@ export default function PatientProfilePage() {
     } finally {
       setIsSaving(false);
     }
-  };
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({
-      ...formData,
-      [e.target.id]: e.target.value,
-    });
   };
 
   if (!session) {
@@ -120,7 +141,8 @@ export default function PatientProfilePage() {
                         value={formData.phone}
                         onChange={handleChange}
                         disabled={isSaving}
-                        placeholder="+1 (555) 000-0000"
+                        placeholder="09XX XXX XXXX or 02X XXX XXXX"
+                        maxLength={13}
                       />
                     </Field>
                     <Field>
