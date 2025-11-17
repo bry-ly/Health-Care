@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
 import { cn } from "@/lib/utils";
+import { formatTime12Hour } from "@/lib/time-utils";
 
 interface TimeSlotPickerProps {
   doctorId: string;
@@ -79,8 +80,9 @@ export function TimeSlotPicker({
       </CardHeader>
       <CardContent>
         {loading ? (
-          <div className="flex items-center justify-center py-8">
+          <div className="flex flex-col items-center justify-center gap-3 py-8">
             <Spinner className="h-6 w-6" />
+            <p className="text-sm text-muted-foreground">Loading available times...</p>
           </div>
         ) : error ? (
           <div className="text-center py-8">
@@ -98,20 +100,23 @@ export function TimeSlotPicker({
           </div>
         ) : (
           <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
-            {availableSlots.map((slot) => (
-              <Button
-                key={slot}
-                type="button"
-                variant={selectedTime === slot ? "default" : "outline"}
-                size="sm"
-                onClick={() => onTimeSelect(slot)}
-                className={cn(
-                  selectedTime === slot && "bg-primary text-primary-foreground"
-                )}
-              >
-                {slot}
-              </Button>
-            ))}
+            {availableSlots.map((slot) => {
+              const displayTime = formatTime12Hour(slot);
+              return (
+                <Button
+                  key={slot}
+                  type="button"
+                  variant={selectedTime === slot ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => onTimeSelect(slot)}
+                  className={cn(
+                    selectedTime === slot && "bg-primary text-primary-foreground"
+                  )}
+                >
+                  {displayTime}
+                </Button>
+              );
+            })}
           </div>
         )}
       </CardContent>
