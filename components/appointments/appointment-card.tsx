@@ -4,8 +4,9 @@ import { format } from "date-fns";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { IconCalendar, IconClock, IconStethoscope } from "@tabler/icons-react";
+import { IconCalendar, IconClock, IconStethoscope, IconMail, IconPhone, IconCreditCard, IconAlertTriangle, IconFileDescription, IconUserCheck } from "@tabler/icons-react";
 import { AppointmentStatus } from "@prisma/client";
+import { formatTime12Hour } from "@/lib/time-utils";
 
 interface AppointmentCardProps {
   id: string;
@@ -14,6 +15,17 @@ interface AppointmentCardProps {
   timeSlot: string;
   status: AppointmentStatus;
   reason?: string | null;
+  symptoms?: string | null;
+  appointmentType?: string | null;
+  urgencyLevel?: string | null;
+  duration?: number | null;
+  patientPhone?: string | null;
+  patientEmail?: string | null;
+  insuranceProvider?: string | null;
+  insurancePolicyNumber?: string | null;
+  emergencyContactName?: string | null;
+  emergencyContactPhone?: string | null;
+  isFollowUp?: boolean | null;
   onReschedule?: (id: string) => void;
   onCancel?: (id: string) => void;
   onDelete?: (id: string) => void;
@@ -48,6 +60,17 @@ export function AppointmentCard({
   timeSlot,
   status,
   reason,
+  symptoms,
+  appointmentType,
+  urgencyLevel,
+  duration,
+  patientPhone,
+  patientEmail,
+  insuranceProvider,
+  insurancePolicyNumber,
+  emergencyContactName,
+  emergencyContactPhone,
+  isFollowUp,
   onReschedule,
   onCancel,
   onDelete,
@@ -71,8 +94,58 @@ export function AppointmentCard({
               </div>
               <div className="flex items-center gap-2 mt-1">
                 <IconClock className="h-4 w-4" />
-                <span>{timeSlot}</span>
+                <span>{formatTime12Hour(timeSlot)}</span>
+                {duration && (
+                  <>
+                    <span className="mx-2">•</span>
+                    <span>{duration} minutes</span>
+                  </>
+                )}
               </div>
+              {(appointmentType || urgencyLevel || isFollowUp) && (
+                <div className="flex items-center gap-2 mt-1 flex-wrap">
+                  {appointmentType && (
+                    <>
+                      <IconFileDescription className="h-4 w-4" />
+                      <span className="text-xs capitalize">{appointmentType.toLowerCase().replace("_", "-")}</span>
+                    </>
+                  )}
+                  {urgencyLevel && (
+                    <>
+                      <span className="mx-1">•</span>
+                      <IconAlertTriangle className={`h-4 w-4 ${
+                        urgencyLevel === "EMERGENCY" ? "text-red-500" :
+                        urgencyLevel === "URGENT" ? "text-orange-500" :
+                        "text-blue-500"
+                      }`} />
+                      <span className="text-xs capitalize">{urgencyLevel.toLowerCase()}</span>
+                    </>
+                  )}
+                  {isFollowUp && (
+                    <>
+                      <span className="mx-1">•</span>
+                      <IconUserCheck className="h-4 w-4" />
+                      <span className="text-xs">Follow-up</span>
+                    </>
+                  )}
+                </div>
+              )}
+              {isDoctorView && (patientPhone || patientEmail) && (
+                <div className="flex flex-col gap-1 mt-2 pt-2 border-t">
+                  {patientPhone && (
+                    <div className="flex items-center gap-2 text-xs">
+                      <IconPhone className="h-3 w-3" />
+                      <span>{patientPhone}</span>
+                    </div>
+                  )}
+                  {patientEmail && (
+                    <div className="flex items-center gap-2 text-xs">
+                      <IconMail className="h-3 w-3" />
+                      <span>{patientEmail}</span>
+                    </div>
+                  )}
+                </div>
+              )}
             </CardDescription>
           </div>
           <Badge className={statusColors[status]} variant="outline">
@@ -80,12 +153,54 @@ export function AppointmentCard({
           </Badge>
         </div>
       </CardHeader>
-      {reason && (
-        <CardContent>
-          <div className="flex items-start gap-2">
-            <IconStethoscope className="h-4 w-4 mt-0.5 text-muted-foreground" />
-            <p className="text-sm text-muted-foreground">{reason}</p>
-          </div>
+      {(reason || symptoms || isDoctorView) && (
+        <CardContent className="space-y-3">
+          {reason && (
+            <div className="flex items-start gap-2">
+              <IconStethoscope className="h-4 w-4 mt-0.5 text-muted-foreground" />
+              <div>
+                <p className="text-xs font-medium text-foreground mb-1">Reason:</p>
+                <p className="text-sm text-muted-foreground">{reason}</p>
+              </div>
+            </div>
+          )}
+          {symptoms && (
+            <div className="flex items-start gap-2 pt-2 border-t">
+              <IconFileDescription className="h-4 w-4 mt-0.5 text-muted-foreground" />
+              <div>
+                <p className="text-xs font-medium text-foreground mb-1">Symptoms:</p>
+                <p className="text-sm text-muted-foreground">{symptoms}</p>
+              </div>
+            </div>
+          )}
+          {isDoctorView && (insuranceProvider || insurancePolicyNumber) && (
+            <div className="flex items-start gap-2 pt-2 border-t">
+              <IconCreditCard className="h-4 w-4 mt-0.5 text-muted-foreground" />
+              <div className="flex-1">
+                <p className="text-xs font-medium text-foreground mb-1">Insurance:</p>
+                {insuranceProvider && (
+                  <p className="text-sm text-muted-foreground">Provider: {insuranceProvider}</p>
+                )}
+                {insurancePolicyNumber && (
+                  <p className="text-sm text-muted-foreground">Policy: {insurancePolicyNumber}</p>
+                )}
+              </div>
+            </div>
+          )}
+          {isDoctorView && (emergencyContactName || emergencyContactPhone) && (
+            <div className="flex items-start gap-2 pt-2 border-t">
+              <IconUserCheck className="h-4 w-4 mt-0.5 text-muted-foreground" />
+              <div className="flex-1">
+                <p className="text-xs font-medium text-foreground mb-1">Emergency Contact:</p>
+                {emergencyContactName && (
+                  <p className="text-sm text-muted-foreground">{emergencyContactName}</p>
+                )}
+                {emergencyContactPhone && (
+                  <p className="text-sm text-muted-foreground">{emergencyContactPhone}</p>
+                )}
+              </div>
+            </div>
+          )}
         </CardContent>
       )}
       {showActions && (
