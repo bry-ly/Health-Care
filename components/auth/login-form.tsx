@@ -20,13 +20,17 @@ import { Input } from "@/components/ui/input";
 import { signIn } from "@/lib/auth-client";
 import { toast } from "sonner";
 import { Eye, EyeOff } from "lucide-react";
+import { loginSchema, type LoginInput } from "@/lib/validations/auth";
+import { useRouter } from "next/navigation";
 
 export function LoginForm({
   className,
   ...props
 }: React.ComponentProps<"div">) {
+  const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [errors, setErrors] = useState<Partial<Record<keyof LoginInput, string>>>({});
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -35,8 +39,31 @@ export function LoginForm({
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsLoading(true);
+    setErrors({});
 
     try {
+      // Validate form data with Zod
+      const validationResult = loginSchema.safeParse(formData);
+      
+      if (!validationResult.success) {
+        const fieldErrors: Partial<Record<keyof LoginInput, string>> = {};
+        
+        // Handle all validation errors
+        validationResult.error.issues.forEach((err) => {
+          const field = err.path[0] as keyof LoginInput;
+          if (field) {
+            // Only set error if field exists, prioritize first error per field
+            if (!fieldErrors[field]) {
+              fieldErrors[field] = err.message;
+            }
+          }
+        });
+        
+        setErrors(fieldErrors);
+        setIsLoading(false);
+        return;
+      }
+
       // Sign in the user
       const result = await signIn.email({
         email: formData.email,
@@ -44,33 +71,47 @@ export function LoginForm({
       });
 
       if (result.error) {
-        toast.error(result.error.message || "Invalid email or password");
+        // Set error message without toast
+        setErrors({
+          email: result.error.message || "Invalid email or password",
+        });
         setIsLoading(false);
         return;
       }
 
-      toast.success("Login successful!");
+      toast.success("Login successful. Redirecting to dashboard...");
 
-      // Use window.location.href for full page reload to ensure session cookie is set
-      // Middleware will handle role-based redirect from /dashboard
-      window.location.href = "/dashboard";
+      // Redirect to dashboard after successful login
+      setTimeout(() => {
+        router.push("/dashboard");
+      }, 2000);
     } catch (error: unknown) {
       console.error("Login error:", error);
       const errorMessage =
         error instanceof Error
           ? error.message
           : "Failed to login. Please try again.";
-      toast.error(errorMessage);
+      setErrors({
+        email: errorMessage,
+      });
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { id, value } = e.target;
     setFormData({
       ...formData,
-      [e.target.id]: e.target.value,
+      [id]: value,
     });
+    // Clear error for this field when user starts typing
+    if (errors[id as keyof LoginInput]) {
+      setErrors({
+        ...errors,
+        [id]: undefined,
+      });
+    }
   };
 
   return (
@@ -92,11 +133,14 @@ export function LoginForm({
                   id="email"
                   type="email"
                   placeholder="your.email@example.com"
-                  required
                   disabled={isLoading}
                   value={formData.email}
                   onChange={handleChange}
+                  className={cn(errors.email && "border-destructive")}
                 />
+                {errors.email && (
+                  <p className="text-xs text-destructive mt-1">{errors.email}</p>
+                )}
               </Field>
 
               {/* Password Field */}
@@ -115,11 +159,10 @@ export function LoginForm({
                     id="password"
                     type={showPassword ? "text" : "password"}
                     placeholder="••••••••"
-                    required
                     disabled={isLoading}
                     value={formData.password}
                     onChange={handleChange}
-                    className="pr-10"
+                    className={cn("pr-10", errors.password && "border-destructive")}
                   />
                   <button
                     type="button"
@@ -134,15 +177,10 @@ export function LoginForm({
                     )}
                   </button>
                 </div>
+                {errors.password && (
+                  <p className="text-xs text-destructive mt-1">{errors.password}</p>
+                )}
               </Field>
-
-              {/* CAPTCHA Verification Note for Security */}
-              <Field>
-                <FieldDescription className="text-xs mx-auto flex justify-center">
-                  ✓ Secure account with verification for your protection
-                </FieldDescription>
-              </Field>
-
               {/* Submit Button */}
               <Field>
                 <Button type="submit" className="w-full" disabled={isLoading}>

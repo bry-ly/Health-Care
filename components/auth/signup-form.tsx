@@ -21,6 +21,7 @@ import { Input } from "@/components/ui/input";
 import { signUp } from "@/lib/auth-client";
 import { toast } from "sonner";
 import { Eye, EyeOff } from "lucide-react";
+import { signupSchema, type SignupInput } from "@/lib/validations/auth";
 
 export function SignupForm({
   className,
@@ -30,6 +31,7 @@ export function SignupForm({
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [errors, setErrors] = useState<Partial<Record<keyof SignupInput, string>>>({});
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -40,27 +42,27 @@ export function SignupForm({
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsLoading(true);
+    setErrors({});
 
     try {
-      // TODO: Add CAPTCHA verification here
-      // Example: Verify reCAPTCHA token before proceeding
-      // const captchaToken = await getCaptchaToken();
-      // if (!captchaToken) {
-      //   toast.error("Please complete the CAPTCHA verification");
-      //   setIsLoading(false);
-      //   return;
-      // }
-
-      // Validate passwords match
-      if (formData.password !== formData.confirmPassword) {
-        toast.error("Passwords do not match");
-        setIsLoading(false);
-        return;
-      }
-
-      // Validate password length
-      if (formData.password.length < 8) {
-        toast.error("Password must be at least 8 characters long");
+      // Validate form data with Zod
+      const validationResult = signupSchema.safeParse(formData);
+      
+      if (!validationResult.success) {
+        const fieldErrors: Partial<Record<keyof SignupInput, string>> = {};
+        
+        // Handle all validation errors including refine errors
+        validationResult.error.issues.forEach((err) => {
+          const field = err.path[0] as keyof SignupInput;
+          if (field) {
+            // Only set error if field exists, prioritize first error per field
+            if (!fieldErrors[field]) {
+              fieldErrors[field] = err.message;
+            }
+          }
+        });
+        
+        setErrors(fieldErrors);
         setIsLoading(false);
         return;
       }
@@ -73,7 +75,10 @@ export function SignupForm({
       });
 
       if (result.error) {
-        toast.error(result.error.message || "Failed to create account");
+        // Set error message without toast
+        setErrors({
+          email: result.error.message || "Failed to create account",
+        });
         setIsLoading(false);
         return;
       }
@@ -92,17 +97,27 @@ export function SignupForm({
         error instanceof Error
           ? error.message
           : "Failed to create account. Please try again.";
-      toast.error(errorMessage);
+      setErrors({
+        email: errorMessage,
+      });
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { id, value } = e.target;
     setFormData({
       ...formData,
-      [e.target.id]: e.target.value,
+      [id]: value,
     });
+    // Clear error for this field when user starts typing
+    if (errors[id as keyof SignupInput]) {
+      setErrors({
+        ...errors,
+        [id]: undefined,
+      });
+    }
   };
 
   return (
@@ -125,12 +140,14 @@ export function SignupForm({
                   id="name"
                   type="text"
                   placeholder="Enter your full name"
-                  required
                   disabled={isLoading}
                   value={formData.name}
                   onChange={handleChange}
-                  className="h-9"
+                  className={cn("h-9", errors.name && "border-destructive")}
                 />
+                {errors.name && (
+                  <p className="text-xs text-destructive mt-1">{errors.name}</p>
+                )}
               </Field>
               <Field>
                 <FieldLabel htmlFor="email" className="text-sm">
@@ -140,15 +157,14 @@ export function SignupForm({
                   id="email"
                   type="email"
                   placeholder="your.email@example.com"
-                  required
                   disabled={isLoading}
                   value={formData.email}
                   onChange={handleChange}
-                  className="h-9"
+                  className={cn("h-9", errors.email && "border-destructive")}
                 />
-                <FieldDescription className="text-xs mx-auto flex justify-center">
-                  ✓ Secure account with verification for your protection
-                </FieldDescription>
+                {errors.email && (
+                  <p className="text-xs text-destructive mt-1">{errors.email}</p>
+                )}
               </Field>
               <Field>
                 <div className="grid grid-cols-2 gap-3">
@@ -161,11 +177,10 @@ export function SignupForm({
                         id="password"
                         type={showPassword ? "text" : "password"}
                         placeholder="••••••••"
-                        required
                         disabled={isLoading}
                         value={formData.password}
                         onChange={handleChange}
-                        className="pr-10 h-9"
+                        className={cn("pr-10 h-9", errors.password && "border-destructive")}
                       />
                       <button
                         type="button"
@@ -180,6 +195,9 @@ export function SignupForm({
                         )}
                       </button>
                     </div>
+                    {errors.password && (
+                      <p className="text-xs text-destructive mt-1">{errors.password}</p>
+                    )}
                   </Field>
                   <Field>
                     <FieldLabel htmlFor="confirmPassword" className="text-sm">
@@ -190,11 +208,10 @@ export function SignupForm({
                         id="confirmPassword"
                         type={showConfirmPassword ? "text" : "password"}
                         placeholder="••••••••"
-                        required
                         disabled={isLoading}
                         value={formData.confirmPassword}
                         onChange={handleChange}
-                        className="pr-10 h-9"
+                        className={cn("pr-10 h-9", errors.confirmPassword && "border-destructive")}
                       />
                       <button
                         type="button"
@@ -211,11 +228,11 @@ export function SignupForm({
                         )}
                       </button>
                     </div>
+                    {errors.confirmPassword && (
+                      <p className="text-xs text-destructive mt-1">{errors.confirmPassword}</p>
+                    )}
                   </Field>
                 </div>
-                <FieldDescription className="text-xs text-shadow-2xs">
-                  Minimum 8 characters
-                </FieldDescription>
               </Field>
               <Field>
                 <Button
