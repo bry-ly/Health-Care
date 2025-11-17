@@ -16,6 +16,8 @@ import {
 } from "@/components/ui/field";
 import { Spinner } from "@/components/ui/spinner";
 import { toast } from "sonner";
+import { formatPhoneInput, formatPhonePH, cleanPhonePH } from "@/lib/phone-utils";
+import { useEffect } from "react";
 
 export default function DoctorProfilePage() {
   const { data: session } = useSession();
@@ -49,7 +51,7 @@ export default function DoctorProfilePage() {
             email: doctor.user.email,
             specialization: doctor.specialization,
             licenseNumber: doctor.licenseNumber,
-            phone: doctor.user.phone || "",
+            phone: doctor.user.phone ? formatPhonePH(doctor.user.phone) : "",
           });
         }
       }
@@ -65,14 +67,17 @@ export default function DoctorProfilePage() {
     setIsSaving(true);
 
     try {
+      // Clean phone number before sending
+      const submitData = {
+        name: formData.name,
+        phone: formData.phone ? cleanPhonePH(formData.phone) : null,
+      };
+
       // Update profile via API
       const response = await fetch("/api/user/profile", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: formData.name,
-          phone: formData.phone,
-        }),
+        body: JSON.stringify(submitData),
       });
 
       if (!response.ok) {
@@ -105,9 +110,13 @@ export default function DoctorProfilePage() {
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.id === "phone" 
+      ? formatPhoneInput(e.target.value)
+      : e.target.value;
+    
     setFormData({
       ...formData,
-      [e.target.id]: e.target.value,
+      [e.target.id]: value,
     });
   };
 
@@ -206,7 +215,8 @@ export default function DoctorProfilePage() {
                         value={formData.phone}
                         onChange={handleChange}
                         disabled={isSaving}
-                        placeholder="+1 (555) 000-0000"
+                        placeholder="09XX XXX XXXX or 02X XXX XXXX"
+                        maxLength={13}
                       />
                     </Field>
                     <Field>

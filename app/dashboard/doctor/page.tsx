@@ -22,6 +22,7 @@ import {
   IconClock,
   IconCheck,
 } from "@tabler/icons-react";
+import { formatTime12Hour } from "@/lib/time-utils";
 
 export default function DoctorDashboard() {
   const { data: session, isPending } = useSession();
@@ -180,7 +181,7 @@ export default function DoctorDashboard() {
                         <div>
                           <p className="font-medium">{appointment.patient.name}</p>
                           <p className="text-sm text-muted-foreground">
-                            {appointment.timeSlot} - {appointment.reason || "No reason provided"}
+                            {formatTime12Hour(appointment.timeSlot)} - {appointment.reason || "No reason provided"}
                           </p>
                         </div>
                         <span className="text-sm text-muted-foreground">

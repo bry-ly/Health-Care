@@ -175,6 +175,17 @@ export default function DoctorAppointmentsPage() {
                         timeSlot={appointment.timeSlot}
                         status={appointment.status}
                         reason={appointment.reason}
+                        symptoms={appointment.symptoms}
+                        appointmentType={appointment.appointmentType}
+                        urgencyLevel={appointment.urgencyLevel}
+                        duration={appointment.duration}
+                        patientPhone={appointment.patientPhone}
+                        patientEmail={appointment.patientEmail}
+                        insuranceProvider={appointment.insuranceProvider}
+                        insurancePolicyNumber={appointment.insurancePolicyNumber}
+                        emergencyContactName={appointment.emergencyContactName}
+                        emergencyContactPhone={appointment.emergencyContactPhone}
+                        isFollowUp={appointment.isFollowUp}
                         showActions={true}
                         onAccept={() => handleAcceptAppointment(appointment.id)}
                         onReject={() => handleRejectAppointment(appointment.id)}
@@ -204,6 +215,17 @@ export default function DoctorAppointmentsPage() {
                         timeSlot={appointment.timeSlot}
                         status={appointment.status}
                         reason={appointment.reason}
+                        symptoms={appointment.symptoms}
+                        appointmentType={appointment.appointmentType}
+                        urgencyLevel={appointment.urgencyLevel}
+                        duration={appointment.duration}
+                        patientPhone={appointment.patientPhone}
+                        patientEmail={appointment.patientEmail}
+                        insuranceProvider={appointment.insuranceProvider}
+                        insurancePolicyNumber={appointment.insurancePolicyNumber}
+                        emergencyContactName={appointment.emergencyContactName}
+                        emergencyContactPhone={appointment.emergencyContactPhone}
+                        isFollowUp={appointment.isFollowUp}
                         showActions={true}
                         onDelete={handleDelete}
                         isDoctorView={true}
@@ -232,6 +254,17 @@ export default function DoctorAppointmentsPage() {
                         timeSlot={appointment.timeSlot}
                         status={appointment.status}
                         reason={appointment.reason}
+                        symptoms={appointment.symptoms}
+                        appointmentType={appointment.appointmentType}
+                        urgencyLevel={appointment.urgencyLevel}
+                        duration={appointment.duration}
+                        patientPhone={appointment.patientPhone}
+                        patientEmail={appointment.patientEmail}
+                        insuranceProvider={appointment.insuranceProvider}
+                        insurancePolicyNumber={appointment.insurancePolicyNumber}
+                        emergencyContactName={appointment.emergencyContactName}
+                        emergencyContactPhone={appointment.emergencyContactPhone}
+                        isFollowUp={appointment.isFollowUp}
                         showActions={true}
                         onDelete={handleDelete}
                         isDoctorView={true}

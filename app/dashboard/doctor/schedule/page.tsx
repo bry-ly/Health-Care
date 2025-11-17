@@ -12,7 +12,8 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Badge } from "@/components/ui/badge";
 import { useAppointments } from "@/hooks/use-appointments";
 import { format, isSameDay } from "date-fns";
-import { IconCalendar, IconClock, IconUser, IconCheck, IconX } from "@tabler/icons-react";
+import { IconCalendar, IconClock, IconUser, IconCheck, IconX, IconMail, IconPhone, IconCreditCard, IconAlertTriangle, IconFileDescription, IconUserCheck } from "@tabler/icons-react";
+import { formatTime12Hour } from "@/lib/time-utils";
 import { Spinner } from "@/components/ui/spinner";
 import { AppointmentStatus } from "@prisma/client";
 import { toast } from "sonner";
@@ -127,12 +128,102 @@ export default function DoctorSchedulePage() {
                                     </div>
                                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                                       <IconClock className="h-4 w-4" />
-                                      <span>{appointment.timeSlot}</span>
+                                      <span>{formatTime12Hour(appointment.timeSlot)}</span>
+                                      {appointment.duration && (
+                                        <>
+                                          <span className="mx-2">•</span>
+                                          <span>{appointment.duration} minutes</span>
+                                        </>
+                                      )}
                                     </div>
+                                    {(appointment.appointmentType || appointment.urgencyLevel || appointment.isFollowUp) && (
+                                      <div className="flex items-center gap-2 text-sm text-muted-foreground flex-wrap">
+                                        {appointment.appointmentType && (
+                                          <>
+                                            <IconFileDescription className="h-4 w-4" />
+                                            <span className="capitalize text-xs">{appointment.appointmentType.toLowerCase().replace("_", "-")}</span>
+                                          </>
+                                        )}
+                                        {appointment.urgencyLevel && (
+                                          <>
+                                            <span className="mx-1">•</span>
+                                            <IconAlertTriangle className={`h-4 w-4 ${
+                                              appointment.urgencyLevel === "EMERGENCY" ? "text-red-500" :
+                                              appointment.urgencyLevel === "URGENT" ? "text-orange-500" :
+                                              "text-blue-500"
+                                            }`} />
+                                            <span className="capitalize text-xs">{appointment.urgencyLevel.toLowerCase()}</span>
+                                          </>
+                                        )}
+                                        {appointment.isFollowUp && (
+                                          <>
+                                            <span className="mx-1">•</span>
+                                            <IconUserCheck className="h-4 w-4" />
+                                            <span className="text-xs">Follow-up</span>
+                                          </>
+                                        )}
+                                      </div>
+                                    )}
+                                    {(appointment.patientPhone || appointment.patientEmail) && (
+                                      <div className="flex flex-col gap-1 pt-1 border-t">
+                                        {appointment.patientPhone && (
+                                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                            <IconPhone className="h-4 w-4" />
+                                            <span>{appointment.patientPhone}</span>
+                                          </div>
+                                        )}
+                                        {appointment.patientEmail && (
+                                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                            <IconMail className="h-4 w-4" />
+                                            <span>{appointment.patientEmail}</span>
+                                          </div>
+                                        )}
+                                      </div>
+                                    )}
                                     {appointment.reason && (
-                                      <p className="text-sm text-muted-foreground">
-                                        {appointment.reason}
-                                      </p>
+                                      <div className="pt-1">
+                                        <p className="text-xs font-medium text-foreground mb-1">Reason:</p>
+                                        <p className="text-sm text-muted-foreground">{appointment.reason}</p>
+                                      </div>
+                                    )}
+                                    {appointment.symptoms && (
+                                      <div className="pt-1 border-t">
+                                        <p className="text-xs font-medium text-foreground mb-1">Symptoms:</p>
+                                        <p className="text-sm text-muted-foreground">{appointment.symptoms}</p>
+                                      </div>
+                                    )}
+                                    {(appointment.insuranceProvider || appointment.insurancePolicyNumber) && (
+                                      <div className="flex flex-col gap-1 pt-1 border-t">
+                                        <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+                                          <IconCreditCard className="h-4 w-4" />
+                                          <span>Insurance</span>
+                                        </div>
+                                        {appointment.insuranceProvider && (
+                                          <p className="text-sm text-muted-foreground ml-6">
+                                            {appointment.insuranceProvider}
+                                          </p>
+                                        )}
+                                        {appointment.insurancePolicyNumber && (
+                                          <p className="text-sm text-muted-foreground ml-6">
+                                            Policy: {appointment.insurancePolicyNumber}
+                                          </p>
+                                        )}
+                                      </div>
+                                    )}
+                                    {(appointment.emergencyContactName || appointment.emergencyContactPhone) && (
+                                      <div className="flex flex-col gap-1 pt-1 border-t">
+                                        <p className="text-xs font-medium text-foreground">Emergency Contact:</p>
+                                        {appointment.emergencyContactName && (
+                                          <p className="text-sm text-muted-foreground ml-4">
+                                            {appointment.emergencyContactName}
+                                          </p>
+                                        )}
+                                        {appointment.emergencyContactPhone && (
+                                          <p className="text-sm text-muted-foreground ml-4">
+                                            {appointment.emergencyContactPhone}
+                                          </p>
+                                        )}
+                                      </div>
                                     )}
                                   </div>
                                   <Badge
