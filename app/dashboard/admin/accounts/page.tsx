@@ -362,13 +362,15 @@ export default function AdminAccountsPage() {
                               >
                                 <IconEdit className="h-4 w-4" />
                               </Button>
-                              <Button
-                                size="sm"
-                                variant="destructive"
-                                onClick={() => handleDeleteClick(user)}
-                              >
-                                <IconTrash className="h-4 w-4" />
-                              </Button>
+                              {user.role !== "ADMIN" && (
+                                <Button
+                                  size="sm"
+                                  variant="destructive"
+                                  onClick={() => handleDeleteClick(user)}
+                                >
+                                  <IconTrash className="h-4 w-4" />
+                                </Button>
+                              )}
                             </div>
                           </TableCell>
                         </TableRow>
@@ -452,7 +454,8 @@ export default function AdminAccountsPage() {
                       <Input
                         id="phone"
                         type="tel"
-                        placeholder="+1 (555) 000-0000"
+                        placeholder="09XX XXX XXXX or 02X XXX XXXX"
+                        maxLength={13}
                         disabled={isSaving}
                         value={formData.phone}
                         onChange={handleChange}

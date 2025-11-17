@@ -10,7 +10,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useAppointments } from "@/hooks/use-appointments";
 import { format } from "date-fns";
-import { IconCalendar, IconClock, IconUser, IconStethoscope, IconMail } from "@tabler/icons-react";
+import { formatTime12Hour } from "@/lib/time-utils";
+import { IconCalendar, IconClock, IconUser, IconStethoscope, IconMail, IconPhone, IconCreditCard, IconAlertTriangle, IconFileDescription, IconUserCheck } from "@tabler/icons-react";
 import { Spinner } from "@/components/ui/spinner";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -120,13 +121,104 @@ export default function MissedAppointmentsPage() {
                                 </div>
                                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                                   <IconClock className="h-4 w-4" />
-                                  <span>{appointment.timeSlot}</span>
+                                  <span>{formatTime12Hour(appointment.timeSlot)}</span>
+                                  {appointment.duration && (
+                                    <>
+                                      <span className="mx-2">•</span>
+                                      <span>{appointment.duration} minutes</span>
+                                    </>
+                                  )}
                                 </div>
-                                <div className="flex items-center gap-4 text-sm mt-2">
-                                  <div className="flex items-center gap-1">
-                                    <IconMail className="h-4 w-4" />
-                                    <span>{appointment.patient.email}</span>
+                                {(appointment.appointmentType || appointment.urgencyLevel || appointment.isFollowUp) && (
+                                  <div className="flex items-center gap-2 text-sm text-muted-foreground flex-wrap">
+                                    {appointment.appointmentType && (
+                                      <>
+                                        <IconFileDescription className="h-4 w-4" />
+                                        <span className="capitalize">{appointment.appointmentType.toLowerCase().replace("_", "-")}</span>
+                                      </>
+                                    )}
+                                    {appointment.urgencyLevel && (
+                                      <>
+                                        <span className="mx-2">•</span>
+                                        <IconAlertTriangle className={`h-4 w-4 ${
+                                          appointment.urgencyLevel === "EMERGENCY" ? "text-red-500" :
+                                          appointment.urgencyLevel === "URGENT" ? "text-orange-500" :
+                                          "text-blue-500"
+                                        }`} />
+                                        <span className="capitalize">{appointment.urgencyLevel.toLowerCase()}</span>
+                                      </>
+                                    )}
+                                    {appointment.isFollowUp && (
+                                      <>
+                                        <span className="mx-2">•</span>
+                                        <IconUserCheck className="h-4 w-4" />
+                                        <span>Follow-up</span>
+                                      </>
+                                    )}
                                   </div>
+                                )}
+                                <div className="flex flex-col gap-1 text-sm pt-1 border-t">
+                                  {(appointment.patientPhone || appointment.patientEmail) && (
+                                    <div className="flex flex-col gap-1">
+                                      {appointment.patientPhone && (
+                                        <div className="flex items-center gap-2 text-muted-foreground">
+                                          <IconPhone className="h-4 w-4" />
+                                          <span>{appointment.patientPhone}</span>
+                                        </div>
+                                      )}
+                                      {appointment.patientEmail && (
+                                        <div className="flex items-center gap-2 text-muted-foreground">
+                                          <IconMail className="h-4 w-4" />
+                                          <span>{appointment.patientEmail}</span>
+                                        </div>
+                                      )}
+                                    </div>
+                                  )}
+                                  {appointment.reason && (
+                                    <div className="pt-1">
+                                      <p className="text-xs font-medium text-foreground mb-1">Reason:</p>
+                                      <p className="text-sm text-muted-foreground">{appointment.reason}</p>
+                                    </div>
+                                  )}
+                                  {appointment.symptoms && (
+                                    <div className="pt-1 border-t">
+                                      <p className="text-xs font-medium text-foreground mb-1">Symptoms:</p>
+                                      <p className="text-sm text-muted-foreground">{appointment.symptoms}</p>
+                                    </div>
+                                  )}
+                                  {(appointment.insuranceProvider || appointment.insurancePolicyNumber) && (
+                                    <div className="flex flex-col gap-1 pt-1 border-t">
+                                      <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+                                        <IconCreditCard className="h-4 w-4" />
+                                        <span>Insurance</span>
+                                      </div>
+                                      {appointment.insuranceProvider && (
+                                        <p className="text-sm text-muted-foreground ml-6">
+                                          Provider: {appointment.insuranceProvider}
+                                        </p>
+                                      )}
+                                      {appointment.insurancePolicyNumber && (
+                                        <p className="text-sm text-muted-foreground ml-6">
+                                          Policy: {appointment.insurancePolicyNumber}
+                                        </p>
+                                      )}
+                                    </div>
+                                  )}
+                                  {(appointment.emergencyContactName || appointment.emergencyContactPhone) && (
+                                    <div className="flex flex-col gap-1 pt-1 border-t">
+                                      <p className="text-xs font-medium text-foreground">Emergency Contact:</p>
+                                      {appointment.emergencyContactName && (
+                                        <p className="text-sm text-muted-foreground ml-4">
+                                          {appointment.emergencyContactName}
+                                        </p>
+                                      )}
+                                      {appointment.emergencyContactPhone && (
+                                        <p className="text-sm text-muted-foreground ml-4">
+                                          {appointment.emergencyContactPhone}
+                                        </p>
+                                      )}
+                                    </div>
+                                  )}
                                 </div>
                               </div>
                               <Badge variant="destructive">MISSED</Badge>
