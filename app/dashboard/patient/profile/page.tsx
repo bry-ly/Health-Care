@@ -30,13 +30,13 @@ export default function PatientProfilePage() {
   });
 
   useEffect(() => {
-    if (session?.user?.phone) {
+    if ((session?.user as any)?.phone) {
       setFormData(prev => ({
         ...prev,
-        phone: formatPhonePH(session.user.phone || ""),
+        phone: formatPhonePH((session?.user as any).phone || ""),
       }));
     }
-  }, [session?.user?.phone]);
+  }, [(session?.user as any)?.phone]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.id === "phone" 
