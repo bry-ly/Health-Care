@@ -47,12 +47,25 @@ export async function createNotification(options: CreateNotificationOptions) {
 
     // Send email if requested and email data is provided
     if (shouldSendEmail && emailData) {
+      // Get user email
       const user = await prisma.user.findUnique({
         where: { id: userId },
         select: { email: true, name: true },
       });
 
-      if (user?.email) {
+      // If appointmentId is provided, check if appointment has patientEmail
+      let recipientEmail = user?.email || null;
+      if (appointmentId) {
+        const appointment = await prisma.appointment.findUnique({
+          where: { id: appointmentId },
+          select: { patientEmail: true },
+        });
+        if (appointment?.patientEmail) {
+          recipientEmail = appointment.patientEmail;
+        }
+      }
+
+      if (recipientEmail) {
         let emailHtml = "";
         const emailSubject = title;
 
@@ -106,7 +119,7 @@ export async function createNotification(options: CreateNotificationOptions) {
 
         if (emailHtml) {
           const emailResult = await sendEmail({
-            to: user.email,
+            to: recipientEmail,
             subject: emailSubject,
             html: emailHtml,
           });
