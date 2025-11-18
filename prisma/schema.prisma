@@ -28,6 +28,22 @@ enum AppointmentStatus {
   MISSED
 }
 
+enum AppointmentType {
+  CONSULTATION
+  FOLLOW_UP
+  CHECKUP
+  EMERGENCY
+  SURGERY
+  TEST
+  OTHER
+}
+
+enum UrgencyLevel {
+  ROUTINE
+  URGENT
+  EMERGENCY
+}
+
 enum NotificationType {
   APPOINTMENT_REMINDER
   BOOKING_CONFIRMATION
@@ -97,24 +113,39 @@ model DoctorAvailability {
 }
 
 model Appointment {
-  id              String            @id @default(cuid())
-  patientId       String
-  patient         User              @relation("PatientAppointments", fields: [patientId], references: [id], onDelete: Cascade)
-  doctorId        String
-  doctor          Doctor            @relation(fields: [doctorId], references: [id], onDelete: Cascade)
-  appointmentDate DateTime
-  timeSlot        String            // Format: "HH:MM"
-  duration        Int               @default(30) // Duration in minutes
-  status          AppointmentStatus @default(PENDING)
-  reason          String?
-  notes           String?
-  cancelReason    String?
-  assignedDoctor  User?             @relation("DoctorAppointments", fields: [assignedDoctorId], references: [id])
-  assignedDoctorId String?
-  createdAt       DateTime          @default(now())
-  updatedAt       DateTime          @updatedAt
+  id                      String            @id @default(cuid())
+  patientId               String
+  patient                 User              @relation("PatientAppointments", fields: [patientId], references: [id], onDelete: Cascade)
+  doctorId                String
+  doctor                  Doctor            @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  appointmentDate         DateTime
+  timeSlot                String            // Format: "HH:MM"
+  duration                Int               @default(30) // Duration in minutes
+  status                  AppointmentStatus @default(PENDING)
+  appointmentType         AppointmentType?  @default(CONSULTATION)
+  urgencyLevel            UrgencyLevel?     @default(ROUTINE)
+  reason                  String?
+  symptoms                String?           // Detailed symptoms description
+  notes                   String?
+  cancelReason            String?
+  // Insurance information
+  insuranceProvider       String?
+  insurancePolicyNumber   String?
+  // Emergency contact
+  emergencyContactName    String?
+  emergencyContactPhone   String?
+  // Patient contact confirmation
+  patientPhone            String?
+  patientEmail            String?
+  // Previous visit indicator
+  isFollowUp              Boolean           @default(false)
+  previousAppointmentId   String?
+  assignedDoctor          User?             @relation("DoctorAppointments", fields: [assignedDoctorId], references: [id])
+  assignedDoctorId        String?
+  createdAt               DateTime          @default(now())
+  updatedAt               DateTime          @updatedAt
   
-  notifications   Notification[]
+  notifications           Notification[]
   
   @@map("appointment")
 }
