@@ -17,7 +17,6 @@ import {
 import { Spinner } from "@/components/ui/spinner";
 import { toast } from "sonner";
 import { formatPhoneInput, formatPhonePH, cleanPhonePH } from "@/lib/phone-utils";
-import { useEffect } from "react";
 
 export default function DoctorProfilePage() {
   const { data: session } = useSession();
