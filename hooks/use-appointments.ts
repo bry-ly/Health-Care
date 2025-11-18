@@ -12,8 +12,18 @@ interface Appointment {
   duration: number;
   status: AppointmentStatus;
   reason?: string | null;
+  symptoms?: string | null;
   notes?: string | null;
   cancelReason?: string | null;
+  appointmentType?: string | null;
+  urgencyLevel?: string | null;
+  patientPhone?: string | null;
+  patientEmail?: string | null;
+  insuranceProvider?: string | null;
+  insurancePolicyNumber?: string | null;
+  emergencyContactName?: string | null;
+  emergencyContactPhone?: string | null;
+  isFollowUp?: boolean | null;
   doctor: {
     id: string;
     specialization: string;
@@ -26,6 +36,7 @@ interface Appointment {
     id: string;
     name: string;
     email: string;
+    phone?: string | null;
   };
 }
 
@@ -66,7 +77,18 @@ export function useAppointments({ userId, role, status, date }: UseAppointmentsO
       appointmentDate: string;
       timeSlot: string;
       reason?: string;
+      symptoms?: string;
       duration?: number;
+      appointmentType?: string;
+      urgencyLevel?: string;
+      patientPhone?: string;
+      patientEmail?: string;
+      insuranceProvider?: string;
+      insurancePolicyNumber?: string;
+      emergencyContactName?: string;
+      emergencyContactPhone?: string;
+      isFollowUp?: boolean;
+      previousAppointmentId?: string;
     }) => {
       const response = await fetch("/api/appointments", {
         method: "POST",
