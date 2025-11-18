@@ -81,10 +81,11 @@ export function LoginForm({
 
       toast.success("Login successful. Redirecting to dashboard...");
 
-      // Use window.location for full page reload to ensure session cookie is picked up
-      // This is especially important in production where cookies need to be properly set
+      // Use window.location.replace() to replace login page in history
+      // This prevents going back to login page while preserving history before login
+      // Full page reload ensures session cookie is properly recognized in production
       setTimeout(() => {
-        window.location.href = "/dashboard";
+        window.location.replace("/dashboard");
       }, 500);
     } catch (error: unknown) {
       console.error("Login error:", error);
