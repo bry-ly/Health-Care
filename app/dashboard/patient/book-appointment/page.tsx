@@ -49,7 +49,7 @@ export default function BookAppointmentPage() {
   const [reason, setReason] = useState<string>("");
   const [symptoms, setSymptoms] = useState<string>("");
   const [patientPhone, setPatientPhone] = useState<string>(
-    session?.user?.phone ? formatPhonePH(session.user.phone) : ""
+    (session?.user as any)?.phone ? formatPhonePH((session?.user as any).phone) : ""
   );
   const [patientEmail, setPatientEmail] = useState<string>(session?.user?.email || "");
   const [insuranceProvider, setInsuranceProvider] = useState<string>("");
