@@ -41,17 +41,6 @@ export function NavMain({
                   <span>{quickCreateLabel}</span>
                 </Link>
               </SidebarMenuButton>
-              <Button
-                size="icon"
-                className="size-8 group-data-[collapsible=icon]:opacity-0"
-                variant="outline"
-                asChild
-              >
-                <Link href="/dashboard/notifications">
-                  <IconMail />
-                  <span className="sr-only">Inbox</span>
-                </Link>
-              </Button>
             </SidebarMenuItem>
           </SidebarMenu>
         )}
