@@ -81,10 +81,11 @@ export function LoginForm({
 
       toast.success("Login successful. Redirecting to dashboard...");
 
-      // Redirect to dashboard after successful login
+      // Use window.location for full page reload to ensure session cookie is picked up
+      // This is especially important in production where cookies need to be properly set
       setTimeout(() => {
-        router.push("/dashboard");
-      }, 2000);
+        window.location.href = "/dashboard";
+      }, 500);
     } catch (error: unknown) {
       console.error("Login error:", error);
       const errorMessage =
