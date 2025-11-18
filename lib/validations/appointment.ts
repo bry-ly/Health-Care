@@ -6,7 +6,18 @@ export const bookAppointmentSchema = z.object({
   appointmentDate: z.string().or(z.date()),
   timeSlot: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, "Invalid time format (HH:MM)"),
   reason: z.string().optional(),
+  symptoms: z.string().optional(),
   duration: z.number().int().min(15).max(120).default(30),
+  appointmentType: z.enum(["CONSULTATION", "FOLLOW_UP", "CHECKUP", "EMERGENCY", "SURGERY", "TEST", "OTHER"]).optional().default("CONSULTATION"),
+  urgencyLevel: z.enum(["ROUTINE", "URGENT", "EMERGENCY"]).optional().default("ROUTINE"),
+  patientPhone: z.string().optional(),
+  patientEmail: z.string().email("Invalid email format").optional().or(z.literal("")),
+  insuranceProvider: z.string().optional(),
+  insurancePolicyNumber: z.string().optional(),
+  emergencyContactName: z.string().optional(),
+  emergencyContactPhone: z.string().optional().or(z.literal("")),
+  isFollowUp: z.boolean().optional().default(false),
+  previousAppointmentId: z.string().optional(),
 });
 
 export const rescheduleAppointmentSchema = z.object({
