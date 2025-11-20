@@ -3,9 +3,6 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "@/lib/auth-client";
-import { AppSidebar } from "@/components/dashboard/patient/app-sidebar";
-import { SiteHeader } from "@/components/dashboard/site-header";
-import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import {
   Card,
   CardContent,
@@ -33,7 +30,7 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import { Spinner } from "@/components/ui/spinner";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { IconCalendar } from "@tabler/icons-react";
+import { IconCalendar, IconArrowLeft } from "@tabler/icons-react";
 import { formatPhoneInput, cleanPhonePH, formatPhonePH } from "@/lib/phone-utils";
 
 export default function BookAppointmentPage() {
@@ -122,19 +119,26 @@ export default function BookAppointmentPage() {
   }
 
   return (
-    <SidebarProvider>
-      <AppSidebar variant="inset" />
-      <SidebarInset>
-        <SiteHeader />
-        <div className="flex flex-1 flex-col">
-          <div className="@container/main flex flex-1 flex-col items-center justify-center p-4 md:p-6">
-            <div className="w-full max-w-2xl">
-              <div className="flex flex-col gap-2 mb-6 text-center">
-                <h1 className="text-3xl font-bold">Book Appointment</h1>
-                <p className="text-muted-foreground">
-                  Schedule an appointment with a healthcare provider
-                </p>
-              </div>
+    <div className="min-h-screen bg-background">
+      <div className="container mx-auto px-4 py-6 md:px-6 md:py-8">
+        <div className="mb-6">
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={() => router.push("/dashboard/patient")}
+            className="mb-4"
+          >
+            <IconArrowLeft className="mr-2 h-4 w-4" />
+            Back to Dashboard
+          </Button>
+        </div>
+        <div className="mx-auto max-w-2xl">
+          <div className="flex flex-col gap-2 mb-6 text-center">
+            <h1 className="text-3xl font-bold">Book Appointment</h1>
+            <p className="text-muted-foreground">
+              Schedule an appointment with a healthcare provider
+            </p>
+          </div>
 
               <Card>
                 <CardHeader>
@@ -507,11 +511,9 @@ export default function BookAppointmentPage() {
                   </form>
                 </CardContent>
               </Card>
-            </div>
-          </div>
         </div>
-      </SidebarInset>
-    </SidebarProvider>
+      </div>
+    </div>
   );
 }
 
