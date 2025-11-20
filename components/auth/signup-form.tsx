@@ -18,10 +18,19 @@ import {
   FieldLabel,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { signUp } from "@/lib/auth-client";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { signUp, sendVerificationOtp, verifyEmail } from "@/lib/auth-client";
 import { toast } from "sonner";
 import { Eye, EyeOff } from "lucide-react";
 import { signupSchema, type SignupInput } from "@/lib/validations/auth";
+import { OTPVerification } from "./otp-verification";
 
 export function SignupForm({
   className,
@@ -38,6 +47,9 @@ export function SignupForm({
     password: "",
     confirmPassword: "",
   });
+  const [showOTPVerification, setShowOTPVerification] = useState(false);
+  const [isSendingOTP, setIsSendingOTP] = useState(false);
+  const [showLoginDialog, setShowLoginDialog] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -67,6 +79,28 @@ export function SignupForm({
         return;
       }
 
+      // Check if user already exists before attempting signup
+      try {
+        const checkUserResponse = await fetch("/api/auth/check-user", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ email: formData.email }),
+        });
+
+        const checkUserData = await checkUserResponse.json();
+
+        if (checkUserData.exists) {
+          setShowLoginDialog(true);
+          setIsLoading(false);
+          return;
+        }
+      } catch (error) {
+        console.error("Error checking user:", error);
+        // Continue to try signup anyway
+      }
+
       // Sign up the user (default role is PATIENT)
       const result = await signUp.email({
         email: formData.email,
@@ -75,22 +109,47 @@ export function SignupForm({
       });
 
       if (result.error) {
+        const errorMessage = result.error.message || "";
+        const errorCode = result.error.code || "";
+        
+        // Check if user already exists
+        if (
+          errorMessage.toLowerCase().includes("already exists") ||
+          errorMessage.toLowerCase().includes("email already") ||
+          errorMessage.toLowerCase().includes("duplicate") ||
+          errorCode === "USER_ALREADY_EXISTS" ||
+          errorCode === "EMAIL_ALREADY_EXISTS"
+        ) {
+          setShowLoginDialog(true);
+          setIsLoading(false);
+          return;
+        }
+
         // Set error message without toast
         setErrors({
-          email: result.error.message || "Failed to create account",
+          email: errorMessage || "Failed to create account",
         });
         setIsLoading(false);
         return;
       }
 
-      toast.success(
-        "Account created successfully! Please check your email to verify your account."
-      );
+      // Send OTP for email verification
+      setIsSendingOTP(true);
+      const otpResult = await sendVerificationOtp({
+        email: formData.email,
+        type: "email-verification",
+      });
 
-      // Redirect to login page
-      setTimeout(() => {
-        router.push("/login");
-      }, 2000);
+      if (otpResult.error) {
+        toast.error(otpResult.error.message || "Failed to send verification code");
+        setIsSendingOTP(false);
+        return;
+      }
+
+      toast.success("Verification code sent! Please check your email.");
+      setShowOTPVerification(true);
+      setIsLoading(false);
+      setIsSendingOTP(false);
     } catch (error: unknown) {
       console.error("Signup error:", error);
       const errorMessage =
@@ -119,6 +178,54 @@ export function SignupForm({
       });
     }
   };
+
+  const handleOTPVerify = async (otp: string) => {
+    const result = await verifyEmail({
+      email: formData.email,
+      otp,
+    });
+
+    if (result.error) {
+      return { error: { message: result.error.message || "Verification failed" } };
+    }
+
+    toast.success("Email verified successfully! Redirecting to login...");
+    setTimeout(() => {
+      router.push("/login");
+    }, 2000);
+    return {};
+  };
+
+  const handleResendOTP = async () => {
+    setIsSendingOTP(true);
+    const result = await sendVerificationOtp({
+      email: formData.email,
+      type: "email-verification",
+    });
+    setIsSendingOTP(false);
+    
+    if (result.error) {
+      throw new Error(result.error.message || "Failed to resend code");
+    }
+  };
+
+  if (showOTPVerification) {
+    return (
+      <OTPVerification
+        email={formData.email}
+        type="email-verification"
+        onSuccess={() => {
+          router.push("/login");
+        }}
+        onBack={() => {
+          setShowOTPVerification(false);
+        }}
+        resendCallback={handleResendOTP}
+        verifyCallback={handleOTPVerify}
+        className={className}
+      />
+    );
+  }
 
   return (
     <div className={cn("flex flex-col gap-3", className)} {...props}>
@@ -238,9 +345,11 @@ export function SignupForm({
                 <Button
                   type="submit"
                   className="w-full h-9 lg:mt-0"
-                  disabled={isLoading}
+                  disabled={isLoading || isSendingOTP}
                 >
-                  {isLoading ? "Creating..." : "Create Account"}
+                  {isLoading || isSendingOTP
+                    ? "Creating account..."
+                    : "Create Account"}
                 </Button>
                 <FieldDescription className="text-center text-xs">
                   Already have an account?{" "}
@@ -263,6 +372,38 @@ export function SignupForm({
           Privacy Policy
         </a>
       </FieldDescription>
+
+      {/* Account Already Exists Dialog */}
+      <Dialog open={showLoginDialog} onOpenChange={setShowLoginDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Account Already Exists</DialogTitle>
+            <DialogDescription>
+              An account with the email{" "}
+              <span className="font-medium">{formData.email}</span> already
+              exists. Would you like to sign in instead?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setShowLoginDialog(false)}
+              className="w-full sm:w-auto"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={() => {
+                setShowLoginDialog(false);
+                router.push("/login");
+              }}
+              className="w-full sm:w-auto"
+            >
+              Sign In
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
