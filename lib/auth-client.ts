@@ -1,6 +1,7 @@
 "use client";
 
 import { createAuthClient } from "better-auth/react";
+import { emailOTPClient, lastLoginMethodClient } from "better-auth/client/plugins";
 
 // Get baseURL - use environment variable if set, otherwise use current origin
 // This ensures it works correctly in both development and production
@@ -11,6 +12,16 @@ const baseURL =
 
 export const authClient = createAuthClient({
   baseURL,
+  plugins: [emailOTPClient(), lastLoginMethodClient()],
 });
 
 export const { signIn, signUp, signOut, useSession } = authClient;
+
+// Export OTP methods from the client
+export const sendVerificationOtp = authClient.emailOtp.sendVerificationOtp;
+export const verifyEmail = authClient.emailOtp.verifyEmail;
+
+// Export last login method helpers
+export const getLastUsedLoginMethod = () => authClient.getLastUsedLoginMethod();
+export const isLastUsedLoginMethod = (method: string) => authClient.isLastUsedLoginMethod(method);
+export const clearLastUsedLoginMethod = () => authClient.clearLastUsedLoginMethod();
