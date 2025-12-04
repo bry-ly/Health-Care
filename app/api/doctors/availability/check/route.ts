@@ -1,6 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { format, parse, isAfter, isBefore, addMinutes, setHours, setMinutes } from "date-fns";
+import {
+  format,
+  parse,
+  isAfter,
+  isBefore,
+  addMinutes,
+  setHours,
+  setMinutes,
+} from "date-fns";
 
 // GET available time slots for a doctor on a specific date
 export async function GET(request: NextRequest) {
@@ -21,26 +29,30 @@ export async function GET(request: NextRequest) {
     const appointmentDate = new Date(year, month - 1, day);
     const dayOfWeek = appointmentDate.getDay(); // 0 = Sunday, 6 = Saturday
 
-    // Get doctor's availability for this day
-    const doctorAvailability = await prisma.doctorAvailability.findFirst({
+    // Get ALL doctor's availability records for this day (supports multiple time slots)
+    const doctorAvailabilities = await prisma.doctorAvailability.findMany({
       where: {
         doctorId,
         dayOfWeek,
         isActive: true,
       },
+      orderBy: {
+        startTime: "asc",
+      },
     });
 
-    if (!doctorAvailability) {
+    if (!doctorAvailabilities || doctorAvailabilities.length === 0) {
       return NextResponse.json(
-        { 
-          availableSlots: [], 
-          message: "Doctor has not set availability for this day. Please contact the doctor or check back later." 
+        {
+          availableSlots: [],
+          message:
+            "Doctor has not set availability for this day. Please contact the doctor or check back later.",
         },
         { status: 200 }
       );
     }
 
-    // Create date boundaries for the appointment date (fix mutation issue)
+    // Create date boundaries for the appointment date
     const startOfDay = new Date(appointmentDate);
     startOfDay.setHours(0, 0, 0, 0);
     const endOfDay = new Date(appointmentDate);
@@ -60,33 +72,39 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    // Parse working hours
-    const [startHour, startMin] = doctorAvailability.startTime.split(":").map(Number);
-    const [endHour, endMin] = doctorAvailability.endTime.split(":").map(Number);
-    
-    const breakStart = doctorAvailability.breakStart
-      ? doctorAvailability.breakStart.split(":").map(Number)
-      : null;
-    const breakEnd = doctorAvailability.breakEnd
-      ? doctorAvailability.breakEnd.split(":").map(Number)
-      : null;
-
-    // Generate time slots (30-minute intervals by default)
+    // Generate time slots from ALL availability periods
     const slotDuration = 30; // minutes
     const availableSlots: string[] = [];
-    
-    let currentTime = setMinutes(setHours(appointmentDate, startHour), startMin);
-    const endTime = setMinutes(setHours(appointmentDate, endHour), endMin);
+    const workingPeriods: { start: string; end: string }[] = [];
 
-    while (isBefore(currentTime, endTime)) {
-      const nextSlot = addMinutes(currentTime, slotDuration);
-      
-      // Check if current slot is within break time
-      const isInBreak = breakStart && breakEnd && 
-        isAfter(currentTime, setMinutes(setHours(appointmentDate, breakStart[0]), breakStart[1])) &&
-        isBefore(nextSlot, setMinutes(setHours(appointmentDate, breakEnd[0]), breakEnd[1]));
+    for (const doctorAvailability of doctorAvailabilities) {
+      // Parse working hours for this slot
+      const [startHour, startMin] = doctorAvailability.startTime
+        .split(":")
+        .map(Number);
+      const [endHour, endMin] = doctorAvailability.endTime
+        .split(":")
+        .map(Number);
 
-      if (!isInBreak) {
+      workingPeriods.push({
+        start: doctorAvailability.startTime,
+        end: doctorAvailability.endTime,
+      });
+
+      let currentTime = setMinutes(
+        setHours(appointmentDate, startHour),
+        startMin
+      );
+      const endTime = setMinutes(setHours(appointmentDate, endHour), endMin);
+
+      while (isBefore(currentTime, endTime)) {
+        const nextSlot = addMinutes(currentTime, slotDuration);
+
+        // Make sure the full appointment fits within the working period
+        if (isAfter(nextSlot, endTime)) {
+          break;
+        }
+
         // Check if slot conflicts with existing appointments
         const slotTimeStr = format(currentTime, "HH:mm");
         const conflicts = existingAppointments.some((apt) => {
@@ -95,20 +113,30 @@ export async function GET(request: NextRequest) {
           return (
             (isAfter(currentTime, aptTime) && isBefore(currentTime, aptEnd)) ||
             (isAfter(nextSlot, aptTime) && isBefore(nextSlot, aptEnd)) ||
-            (isBefore(currentTime, aptTime) && isAfter(nextSlot, aptEnd))
+            (isBefore(currentTime, aptTime) && isAfter(nextSlot, aptEnd)) ||
+            format(currentTime, "HH:mm") === apt.timeSlot
           );
         });
 
         if (!conflicts) {
-          availableSlots.push(slotTimeStr);
+          // Avoid duplicates (in case time slots overlap)
+          if (!availableSlots.includes(slotTimeStr)) {
+            availableSlots.push(slotTimeStr);
+          }
         }
-      }
 
-      currentTime = nextSlot;
+        currentTime = nextSlot;
+      }
     }
 
+    // Sort slots chronologically
+    availableSlots.sort();
+
     return NextResponse.json(
-      { availableSlots, workingHours: { start: doctorAvailability.startTime, end: doctorAvailability.endTime } },
+      {
+        availableSlots,
+        workingHours: workingPeriods,
+      },
       { status: 200 }
     );
   } catch (error) {
@@ -119,6 +147,3 @@ export async function GET(request: NextRequest) {
     );
   }
 }
-
-
-
