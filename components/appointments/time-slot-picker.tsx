@@ -56,9 +56,9 @@ const periodLabels: Record<string, string> = {
 };
 
 const periodIcons: Record<string, string> = {
-  morning: "🌅",
-  afternoon: "☀️",
-  evening: "🌙",
+  morning: "",
+  afternoon: "",
+  evening: "",
 };
 
 export function TimeSlotPicker({
