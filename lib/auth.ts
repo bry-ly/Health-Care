@@ -85,7 +85,7 @@ export const auth = betterAuth({
       },
       otpLength: 6,
       expiresIn: 300, // 5 minutes
-      sendVerificationOnSignUp: true,
+      sendVerificationOnSignUp: false,
       overrideDefaultEmailVerification: true,
       disableSignUp: true, // Prevent automatic sign-up when user doesn't exist
     }),
