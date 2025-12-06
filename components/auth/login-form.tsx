@@ -25,7 +25,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { signIn, sendVerificationOtp, getLastUsedLoginMethod } from "@/lib/auth-client";
+import {
+  signIn,
+  sendVerificationOtp,
+  getLastUsedLoginMethod,
+} from "@/lib/auth-client";
 import { toast } from "sonner";
 import { Eye, EyeOff } from "lucide-react";
 import { loginSchema, type LoginInput } from "@/lib/validations/auth";
@@ -39,12 +43,16 @@ export function LoginForm({
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [errors, setErrors] = useState<Partial<Record<keyof LoginInput, string>>>({});
+  const [errors, setErrors] = useState<
+    Partial<Record<keyof LoginInput, string>>
+  >({});
   const [formData, setFormData] = useState({
     email: "",
     password: "",
   });
-  const [loginMethod, setLoginMethod] = useState<"password" | "otp">("password");
+  const [loginMethod, setLoginMethod] = useState<"password" | "otp">(
+    "password"
+  );
   const [showOTPVerification, setShowOTPVerification] = useState(false);
   const [isSendingOTP, setIsSendingOTP] = useState(false);
   const [showSignUpDialog, setShowSignUpDialog] = useState(false);
@@ -137,10 +145,10 @@ export function LoginForm({
       // Password login
       // Validate form data with Zod
       const validationResult = loginSchema.safeParse(formData);
-      
+
       if (!validationResult.success) {
         const fieldErrors: Partial<Record<keyof LoginInput, string>> = {};
-        
+
         // Handle all validation errors
         validationResult.error.issues.forEach((err) => {
           const field = err.path[0] as keyof LoginInput;
@@ -151,7 +159,7 @@ export function LoginForm({
             }
           }
         });
-        
+
         setErrors(fieldErrors);
         setIsLoading(false);
         return;
@@ -189,7 +197,7 @@ export function LoginForm({
         // Check if user doesn't exist (fallback check)
         const errorMessage = result.error.message || "";
         const errorCode = result.error.code || "";
-        
+
         // Check for user not found errors
         if (
           errorMessage.toLowerCase().includes("user not found") ||
@@ -271,7 +279,8 @@ export function LoginForm({
       return { error: { message: errorMessage } };
     }
 
-    toast.success("Login successful. Redirecting to dashboard...");
+    // Show success toast and redirect to dashboard
+    toast.success("Login successful! Redirecting to dashboard...");
     setTimeout(() => {
       window.location.replace("/dashboard");
     }, 500);
@@ -285,7 +294,7 @@ export function LoginForm({
       type: "sign-in",
     });
     setIsSendingOTP(false);
-    
+
     if (result.error) {
       throw new Error(result.error.message || "Failed to resend code");
     }
@@ -379,7 +388,9 @@ export function LoginForm({
                   className={cn(errors.email && "border-destructive")}
                 />
                 {errors.email && (
-                  <p className="text-xs text-destructive mt-1">{errors.email}</p>
+                  <p className="text-xs text-destructive mt-1">
+                    {errors.email}
+                  </p>
                 )}
               </Field>
 
@@ -403,7 +414,10 @@ export function LoginForm({
                       disabled={isLoading}
                       value={formData.password}
                       onChange={handleChange}
-                      className={cn("pr-10", errors.password && "border-destructive")}
+                      className={cn(
+                        "pr-10",
+                        errors.password && "border-destructive"
+                      )}
                     />
                     <button
                       type="button"
@@ -419,14 +433,20 @@ export function LoginForm({
                     </button>
                   </div>
                   {errors.password && (
-                    <p className="text-xs text-destructive mt-1">{errors.password}</p>
+                    <p className="text-xs text-destructive mt-1">
+                      {errors.password}
+                    </p>
                   )}
                 </Field>
               )}
 
               {/* Submit Button */}
               <Field>
-                <Button type="submit" className="w-full" disabled={isLoading || isSendingOTP}>
+                <Button
+                  type="submit"
+                  className="w-full"
+                  disabled={isLoading || isSendingOTP}
+                >
                   {isLoading || isSendingOTP
                     ? loginMethod === "otp"
                       ? "Sending code..."
