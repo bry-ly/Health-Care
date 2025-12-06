@@ -40,7 +40,9 @@ export function SignupForm({
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [errors, setErrors] = useState<Partial<Record<keyof SignupInput, string>>>({});
+  const [errors, setErrors] = useState<
+    Partial<Record<keyof SignupInput, string>>
+  >({});
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -59,10 +61,10 @@ export function SignupForm({
     try {
       // Validate form data with Zod
       const validationResult = signupSchema.safeParse(formData);
-      
+
       if (!validationResult.success) {
         const fieldErrors: Partial<Record<keyof SignupInput, string>> = {};
-        
+
         // Handle all validation errors including refine errors
         validationResult.error.issues.forEach((err) => {
           const field = err.path[0] as keyof SignupInput;
@@ -73,7 +75,7 @@ export function SignupForm({
             }
           }
         });
-        
+
         setErrors(fieldErrors);
         setIsLoading(false);
         return;
@@ -111,7 +113,7 @@ export function SignupForm({
       if (result.error) {
         const errorMessage = result.error.message || "";
         const errorCode = result.error.code || "";
-        
+
         // Check if user already exists
         if (
           errorMessage.toLowerCase().includes("already exists") ||
@@ -133,23 +135,11 @@ export function SignupForm({
         return;
       }
 
-      // Send OTP for email verification
-      setIsSendingOTP(true);
-      const otpResult = await sendVerificationOtp({
-        email: formData.email,
-        type: "email-verification",
-      });
-
-      if (otpResult.error) {
-        toast.error(otpResult.error.message || "Failed to send verification code");
-        setIsSendingOTP(false);
-        return;
-      }
-
+      // OTP is automatically sent by Better Auth when overrideDefaultEmailVerification is true
+      // No need to manually send OTP here - it's already sent during signup
       toast.success("Verification code sent! Please check your email.");
       setShowOTPVerification(true);
       setIsLoading(false);
-      setIsSendingOTP(false);
     } catch (error: unknown) {
       console.error("Signup error:", error);
       const errorMessage =
@@ -186,7 +176,9 @@ export function SignupForm({
     });
 
     if (result.error) {
-      return { error: { message: result.error.message || "Verification failed" } };
+      return {
+        error: { message: result.error.message || "Verification failed" },
+      };
     }
 
     toast.success("Email verified successfully! Redirecting to login...");
@@ -203,7 +195,7 @@ export function SignupForm({
       type: "email-verification",
     });
     setIsSendingOTP(false);
-    
+
     if (result.error) {
       throw new Error(result.error.message || "Failed to resend code");
     }
@@ -270,7 +262,9 @@ export function SignupForm({
                   className={cn("h-9", errors.email && "border-destructive")}
                 />
                 {errors.email && (
-                  <p className="text-xs text-destructive mt-1">{errors.email}</p>
+                  <p className="text-xs text-destructive mt-1">
+                    {errors.email}
+                  </p>
                 )}
               </Field>
               <Field>
@@ -287,7 +281,10 @@ export function SignupForm({
                         disabled={isLoading}
                         value={formData.password}
                         onChange={handleChange}
-                        className={cn("pr-10 h-9", errors.password && "border-destructive")}
+                        className={cn(
+                          "pr-10 h-9",
+                          errors.password && "border-destructive"
+                        )}
                       />
                       <button
                         type="button"
@@ -303,7 +300,9 @@ export function SignupForm({
                       </button>
                     </div>
                     {errors.password && (
-                      <p className="text-xs text-destructive mt-1">{errors.password}</p>
+                      <p className="text-xs text-destructive mt-1">
+                        {errors.password}
+                      </p>
                     )}
                   </Field>
                   <Field>
@@ -318,7 +317,10 @@ export function SignupForm({
                         disabled={isLoading}
                         value={formData.confirmPassword}
                         onChange={handleChange}
-                        className={cn("pr-10 h-9", errors.confirmPassword && "border-destructive")}
+                        className={cn(
+                          "pr-10 h-9",
+                          errors.confirmPassword && "border-destructive"
+                        )}
                       />
                       <button
                         type="button"
@@ -336,7 +338,9 @@ export function SignupForm({
                       </button>
                     </div>
                     {errors.confirmPassword && (
-                      <p className="text-xs text-destructive mt-1">{errors.confirmPassword}</p>
+                      <p className="text-xs text-destructive mt-1">
+                        {errors.confirmPassword}
+                      </p>
                     )}
                   </Field>
                 </div>
