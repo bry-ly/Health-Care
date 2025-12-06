@@ -48,6 +48,7 @@ export function OTPVerification({
   const [error, setError] = useState<string | null>(null);
   const [countdown, setCountdown] = useState(0); // Resend cooldown
   const [otpTimer, setOtpTimer] = useState(300); // OTP expiration timer (5 minutes = 300 seconds)
+  const [isVerified, setIsVerified] = useState(false); // Track successful verification
 
   // Resend cooldown timer
   useEffect(() => {
@@ -62,11 +63,11 @@ export function OTPVerification({
     if (otpTimer > 0) {
       const timer = setTimeout(() => setOtpTimer(otpTimer - 1), 1000);
       return () => clearTimeout(timer);
-    } else {
-      // OTP expired
+    } else if (!isVerified) {
+      // Only show expired error if not successfully verified
       setError("Verification code has expired. Please request a new one.");
     }
-  }, [otpTimer]);
+  }, [otpTimer, isVerified]);
 
   // Format timer as MM:SS
   const formatTimer = (seconds: number) => {
@@ -93,7 +94,8 @@ export function OTPVerification({
         return;
       }
 
-      toast.success("Verification successful!");
+      // Don't show toast here - let the parent component handle success feedback
+      setIsVerified(true); // Mark as verified to prevent expiration error
       setOtpTimer(0); // Stop timer on success
       onSuccess();
     } catch (error: unknown) {
@@ -187,12 +189,30 @@ export function OTPVerification({
                   containerClassName="gap-3"
                 >
                   <InputOTPGroup>
-                    <InputOTPSlot index={0} className="h-14 w-14 text-xl font-semibold" />
-                    <InputOTPSlot index={1} className="h-14 w-14 text-xl font-semibold" />
-                    <InputOTPSlot index={2} className="h-14 w-14 text-xl font-semibold" />
-                    <InputOTPSlot index={3} className="h-14 w-14 text-xl font-semibold" />
-                    <InputOTPSlot index={4} className="h-14 w-14 text-xl font-semibold" />
-                    <InputOTPSlot index={5} className="h-14 w-14 text-xl font-semibold" />
+                    <InputOTPSlot
+                      index={0}
+                      className="h-14 w-14 text-xl font-semibold"
+                    />
+                    <InputOTPSlot
+                      index={1}
+                      className="h-14 w-14 text-xl font-semibold"
+                    />
+                    <InputOTPSlot
+                      index={2}
+                      className="h-14 w-14 text-xl font-semibold"
+                    />
+                    <InputOTPSlot
+                      index={3}
+                      className="h-14 w-14 text-xl font-semibold"
+                    />
+                    <InputOTPSlot
+                      index={4}
+                      className="h-14 w-14 text-xl font-semibold"
+                    />
+                    <InputOTPSlot
+                      index={5}
+                      className="h-14 w-14 text-xl font-semibold"
+                    />
                   </InputOTPGroup>
                 </InputOTP>
               </div>
@@ -275,4 +295,3 @@ export function OTPVerification({
     </div>
   );
 }
-
