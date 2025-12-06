@@ -135,8 +135,22 @@ export function SignupForm({
         return;
       }
 
-      // OTP is automatically sent by Better Auth when overrideDefaultEmailVerification is true
-      // No need to manually send OTP here - it's already sent during signup
+      // Send OTP for email verification after successful signup
+      setIsSendingOTP(true);
+      const otpResult = await sendVerificationOtp({
+        email: formData.email,
+        type: "email-verification",
+      });
+      setIsSendingOTP(false);
+
+      if (otpResult.error) {
+        toast.error(
+          otpResult.error.message || "Failed to send verification code"
+        );
+        setIsLoading(false);
+        return;
+      }
+
       toast.success("Verification code sent! Please check your email.");
       setShowOTPVerification(true);
       setIsLoading(false);
@@ -181,10 +195,11 @@ export function SignupForm({
       };
     }
 
+    // Show success toast and navigate to login
     toast.success("Email verified successfully! Redirecting to login...");
     setTimeout(() => {
       router.push("/login");
-    }, 2000);
+    }, 1500);
     return {};
   };
 
