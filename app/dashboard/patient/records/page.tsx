@@ -4,12 +4,28 @@ import { useSession } from "@/lib/auth-client";
 import { AppSidebar } from "@/components/dashboard/patient/app-sidebar";
 import { SiteHeader } from "@/components/dashboard/site-header";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
-import { IconFileDescription } from "@tabler/icons-react";
+import { useMedicalHistory } from "@/hooks/use-medical-history";
+import { MedicalHistoryForm } from "@/components/medical-history/medical-history-form";
+import { AllergyList } from "@/components/medical-history/allergy-list";
+import { ChronicConditionsList } from "@/components/medical-history/chronic-conditions-list";
 
 export default function PatientRecordsPage() {
   const { data: session } = useSession();
+  const {
+    medicalHistory,
+    isLoading,
+    updateMedicalHistory,
+    isUpdating,
+    addAllergy,
+    isAddingAllergy,
+    deleteAllergy,
+    isDeletingAllergy,
+    addCondition,
+    isAddingCondition,
+    deleteCondition,
+    isDeletingCondition,
+  } = useMedicalHistory();
 
   if (!session) {
     return (
@@ -29,31 +45,49 @@ export default function PatientRecordsPage() {
             <div className="flex flex-col gap-2">
               <h1 className="text-3xl font-bold">Medical Records</h1>
               <p className="text-muted-foreground">
-                View and manage your medical records
+                View and manage your complete medical history
               </p>
             </div>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Medical Records</CardTitle>
-                <CardDescription>
-                  Your complete medical history and records
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="flex flex-col items-center justify-center py-8 text-center">
-                  <IconFileDescription className="mb-4 h-12 w-12 text-muted-foreground" />
-                  <p className="text-muted-foreground">Medical records feature coming soon</p>
-                  <p className="mt-2 text-sm text-muted-foreground">
-                    This section will display your medical history, diagnoses, and treatment records
-                  </p>
+            {isLoading ? (
+              <div className="flex flex-col items-center justify-center py-12">
+                <Spinner className="h-8 w-8" />
+                <p className="mt-4 text-muted-foreground">
+                  Loading your medical records...
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-6">
+                {/* Basic Health Information */}
+                <MedicalHistoryForm
+                  medicalHistory={medicalHistory ?? null}
+                  onSubmit={updateMedicalHistory}
+                  isSubmitting={isUpdating}
+                />
+
+                {/* Allergies and Chronic Conditions in 2 columns on larger screens */}
+                <div className="grid gap-6 lg:grid-cols-2">
+                  <AllergyList
+                    allergies={medicalHistory?.allergies || []}
+                    onAdd={addAllergy}
+                    onDelete={deleteAllergy}
+                    isAdding={isAddingAllergy}
+                    isDeleting={isDeletingAllergy}
+                  />
+
+                  <ChronicConditionsList
+                    conditions={medicalHistory?.chronicConditions || []}
+                    onAdd={addCondition}
+                    onDelete={deleteCondition}
+                    isAdding={isAddingCondition}
+                    isDeleting={isDeletingCondition}
+                  />
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            )}
           </div>
         </div>
       </SidebarInset>
     </SidebarProvider>
   );
 }
-
