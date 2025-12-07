@@ -1,6 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 
+// Role to dashboard path mapping
+const ROLE_DASHBOARD_MAP: Record<string, string> = {
+  PATIENT: "/dashboard/patient",
+  DOCTOR: "/dashboard/doctor",
+  ADMIN: "/dashboard/admin",
+};
+
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
@@ -11,7 +18,6 @@ export async function middleware(request: NextRequest) {
   }
 
   // Check session for protected routes
-  // In middleware, pass request headers directly, not using headers() function
   const session = await auth.api.getSession({
     headers: request.headers,
   });
@@ -20,55 +26,25 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
-  // Role-based access control
-  const user = session.user;
+  const userRole = session.user.role as string;
+  const userDashboard =
+    ROLE_DASHBOARD_MAP[userRole] || ROLE_DASHBOARD_MAP.PATIENT;
 
   // Redirect /dashboard to role-specific dashboard
   if (pathname === "/dashboard") {
-    switch (user.role) {
-      case "PATIENT":
-        return NextResponse.redirect(
-          new URL("/dashboard/patient", request.url)
-        );
-      case "DOCTOR":
-        return NextResponse.redirect(new URL("/dashboard/doctor", request.url));
-      case "ADMIN":
-        return NextResponse.redirect(new URL("/dashboard/admin", request.url));
-      default:
-        return NextResponse.redirect(
-          new URL("/dashboard/patient", request.url)
-        );
-    }
+    return NextResponse.redirect(new URL(userDashboard, request.url));
   }
 
-  if (pathname.startsWith("/dashboard/patient") && user.role !== "PATIENT") {
-    // Redirect to correct dashboard based on role
-    if (user.role === "DOCTOR") {
-      return NextResponse.redirect(new URL("/dashboard/doctor", request.url));
-    } else if (user.role === "ADMIN") {
-      return NextResponse.redirect(new URL("/dashboard/admin", request.url));
-    }
-    return NextResponse.redirect(new URL("/dashboard/patient", request.url));
-  }
+  // Check if user is trying to access a dashboard they shouldn't
+  const dashboardSegment = pathname.split("/")[2]; // "patient", "doctor", or "admin"
+  const allowedSegment = userDashboard.split("/")[2];
 
-  if (pathname.startsWith("/dashboard/doctor") && user.role !== "DOCTOR") {
-    // Redirect to correct dashboard based on role
-    if (user.role === "PATIENT") {
-      return NextResponse.redirect(new URL("/dashboard/patient", request.url));
-    } else if (user.role === "ADMIN") {
-      return NextResponse.redirect(new URL("/dashboard/admin", request.url));
-    }
-    return NextResponse.redirect(new URL("/dashboard/patient", request.url));
-  }
-
-  if (pathname.startsWith("/dashboard/admin") && user.role !== "ADMIN") {
-    // Redirect to correct dashboard based on role
-    if (user.role === "PATIENT") {
-      return NextResponse.redirect(new URL("/dashboard/patient", request.url));
-    } else if (user.role === "DOCTOR") {
-      return NextResponse.redirect(new URL("/dashboard/doctor", request.url));
-    }
-    return NextResponse.redirect(new URL("/dashboard/patient", request.url));
+  if (
+    pathname.startsWith("/dashboard/") &&
+    dashboardSegment !== allowedSegment
+  ) {
+    // Redirect to the user's correct dashboard
+    return NextResponse.redirect(new URL(userDashboard, request.url));
   }
 
   return NextResponse.next();
