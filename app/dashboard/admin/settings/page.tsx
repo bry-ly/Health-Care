@@ -20,11 +20,14 @@ import {
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { Spinner } from "@/components/ui/spinner";
+import { IconUser, IconTool, IconPalette, IconBell } from "@tabler/icons-react";
+import { ThemeSwitcher } from "@/components/ui/theme-switcher";
 
 interface SettingsSidebarProps extends React.HTMLAttributes<HTMLElement> {
   items: {
     href: string;
     title: string;
+    icon: React.ElementType;
   }[];
   activeTab: string;
   onTabChange: (tab: string) => void;
@@ -57,6 +60,7 @@ function SettingsSidebar({
           )}
           onClick={() => onTabChange(item.title)}
         >
+          <item.icon className="mr-2 h-4 w-4" />
           {item.title}
         </Button>
       ))}
@@ -75,11 +79,10 @@ export default function AdminSettingsPage() {
   const [bio, setBio] = useState("System Administrator");
 
   const sidebarItems = [
-    { title: "Profile", href: "#profile" },
-    { title: "Account", href: "#account" },
-    { title: "Appearance", href: "#appearance" },
-    { title: "Notifications", href: "#notifications" },
-    { title: "Display", href: "#display" },
+    { title: "Profile", href: "#profile", icon: IconUser },
+    { title: "Account", href: "#account", icon: IconTool },
+    { title: "Appearance", href: "#appearance", icon: IconPalette },
+    { title: "Notifications", href: "#notifications", icon: IconBell },
   ];
 
   const handleUpdateProfile = async (e: React.FormEvent) => {
@@ -196,7 +199,27 @@ export default function AdminSettingsPage() {
                     </form>
                   </div>
                 )}
-                {activeTab !== "Profile" && (
+                {activeTab === "Appearance" && (
+                  <div className="space-y-6">
+                    <div>
+                      <h3 className="text-lg font-medium">Appearance</h3>
+                      <p className="text-sm text-muted-foreground">
+                        Customize the look and feel of the app.
+                      </p>
+                    </div>
+                    <Separator />
+                    <div className="flex items-center justify-between rounded-lg border p-4">
+                      <div className="space-y-0.5">
+                        <label className="text-base font-medium">Theme</label>
+                        <p className="text-sm text-muted-foreground">
+                          Select your preferred theme for the dashboard.
+                        </p>
+                      </div>
+                      <ThemeSwitcher />
+                    </div>
+                  </div>
+                )}
+                {activeTab !== "Profile" && activeTab !== "Appearance" && (
                   <div className="flex h-[400px] flex-col items-center justify-center text-center">
                     <p className="text-muted-foreground">
                       {activeTab} settings coming soon.

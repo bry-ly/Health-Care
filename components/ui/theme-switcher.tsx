@@ -1,7 +1,6 @@
 "use client";
 
 import { useControllableState } from "@radix-ui/react-use-controllable-state";
-import { Monitor, Moon, Sun } from "lucide-react";
 import { motion } from "motion/react";
 import { useCallback, useEffect, useState } from "react";
 import { useTheme } from "next-themes";
@@ -10,18 +9,15 @@ import { cn } from "@/lib/utils";
 const themes = [
   {
     key: "system",
-    icon: Monitor,
-    label: "System theme",
+    label: "System",
   },
   {
     key: "light",
-    icon: Sun,
-    label: "Light theme",
+    label: "Light",
   },
   {
     key: "dark",
-    icon: Moon,
-    label: "Dark theme",
+    label: "Dark",
   },
 ];
 
@@ -66,34 +62,32 @@ export const ThemeSwitcher = ({
   return (
     <div
       className={cn(
-        "relative isolate flex h-8 rounded-full bg-background p-1 ring-1 ring-border",
+        "flex h-9 items-center justify-center rounded-lg bg-muted p-1 text-muted-foreground",
         className
       )}
     >
-      {themes.map(({ key, icon: Icon, label }) => {
+      {themes.map(({ key, label }) => {
         const isActive = theme === key;
 
         return (
           <button
             aria-label={label}
-            className="relative h-6 w-6 rounded-full"
+            className={cn(
+              "relative flex-1 px-3 py-1 text-sm font-medium transition-all cursor-pointer",
+              isActive ? "text-foreground" : "hover:text-foreground"
+            )}
             key={key}
             onClick={() => handleThemeClick(key as "light" | "dark" | "system")}
             type="button"
           >
             {isActive && (
               <motion.div
-                className="absolute inset-0 rounded-full bg-secondary"
+                className="absolute inset-0 rounded-md bg-background shadow-sm"
                 layoutId="activeTheme"
                 transition={{ type: "spring", duration: 0.5 }}
               />
             )}
-            <Icon
-              className={cn(
-                "relative z-10 m-auto h-4 w-4",
-                isActive ? "text-foreground" : "text-muted-foreground"
-              )}
-            />
+            <span className="relative z-10">{label}</span>
           </button>
         );
       })}
