@@ -88,11 +88,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       icon: IconClock,
     },
     {
-      title: "Profile",
-      url: "/dashboard/doctor/profile",
-      icon: IconUser,
-    },
-    {
       title: "Settings",
       url: "/dashboard/doctor/settings",
       icon: IconSettings,
