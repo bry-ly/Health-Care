@@ -85,9 +85,10 @@ model User {
   accounts      Account[]
 
   // Patient-specific relations
-  patientAppointments Appointment[]   @relation("PatientAppointments")
-  notifications       Notification[]
-  medicalHistory      MedicalHistory?
+  patientAppointments     Appointment[]            @relation("PatientAppointments")
+  notifications           Notification[]
+  notificationPreferences NotificationPreferences?
+  medicalHistory          MedicalHistory?
 
   // Doctor-specific relations
   doctorProfile      Doctor?
@@ -190,6 +191,23 @@ model Notification {
   createdAt     DateTime         @default(now())
 
   @@map("notification")
+}
+
+model NotificationPreferences {
+  id     String @id @default(cuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Email notification toggles
+  appointmentReminders Boolean @default(true)
+  bookingConfirmations Boolean @default(true)
+  cancellationAlerts   Boolean @default(true)
+  rescheduleAlerts     Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("notification_preferences")
 }
 
 model Session {

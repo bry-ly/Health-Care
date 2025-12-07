@@ -31,7 +31,15 @@ export interface CreateNotificationOptions {
 
 export async function createNotification(options: CreateNotificationOptions) {
   try {
-    const { userId, appointmentId, type, title, message, sendEmail: shouldSendEmail, emailData } = options;
+    const {
+      userId,
+      appointmentId,
+      type,
+      title,
+      message,
+      sendEmail: shouldSendEmail,
+      emailData,
+    } = options;
 
     // Create notification in database
     const notification = await prisma.notification.create({
@@ -47,6 +55,36 @@ export async function createNotification(options: CreateNotificationOptions) {
 
     // Send email if requested and email data is provided
     if (shouldSendEmail && emailData) {
+      // Check user notification preferences
+      const preferences = await prisma.notificationPreferences.findUnique({
+        where: { userId },
+      });
+
+      // Determine if this notification type is enabled
+      let isEnabled = true;
+      if (preferences) {
+        switch (type) {
+          case "APPOINTMENT_REMINDER":
+            isEnabled = preferences.appointmentReminders;
+            break;
+          case "BOOKING_CONFIRMATION":
+          case "NEW_BOOKING":
+            isEnabled = preferences.bookingConfirmations;
+            break;
+          case "CANCELLATION":
+            isEnabled = preferences.cancellationAlerts;
+            break;
+          case "RESCHEDULE":
+            isEnabled = preferences.rescheduleAlerts;
+            break;
+        }
+      }
+
+      if (!isEnabled) {
+        // User has disabled this notification type, skip email
+        return notification;
+      }
+
       // Get user email
       const user = await prisma.user.findUnique({
         where: { id: userId },
@@ -104,7 +142,12 @@ export async function createNotification(options: CreateNotificationOptions) {
             }
             break;
           case "RESCHEDULE":
-            if (emailData.oldDate && emailData.oldTimeSlot && emailData.newDate && emailData.newTimeSlot) {
+            if (
+              emailData.oldDate &&
+              emailData.oldTimeSlot &&
+              emailData.newDate &&
+              emailData.newTimeSlot
+            ) {
               emailHtml = await appointmentRescheduleEmail({
                 patientName: emailData.patientName,
                 doctorName: emailData.doctorName,
@@ -140,4 +183,3 @@ export async function createNotification(options: CreateNotificationOptions) {
     throw error;
   }
 }
-
