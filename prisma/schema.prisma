@@ -52,6 +52,25 @@ enum NotificationType {
   NEW_BOOKING
 }
 
+enum BloodType {
+  A_POSITIVE
+  A_NEGATIVE
+  B_POSITIVE
+  B_NEGATIVE
+  O_POSITIVE
+  O_NEGATIVE
+  AB_POSITIVE
+  AB_NEGATIVE
+  UNKNOWN
+}
+
+enum AllergySeverity {
+  MILD
+  MODERATE
+  SEVERE
+  LIFE_THREATENING
+}
+
 model User {
   id            String    @id
   name          String
@@ -64,14 +83,15 @@ model User {
   updatedAt     DateTime  @default(now()) @updatedAt
   sessions      Session[]
   accounts      Account[]
-  
+
   // Patient-specific relations
-  patientAppointments Appointment[] @relation("PatientAppointments")
+  patientAppointments Appointment[]   @relation("PatientAppointments")
   notifications       Notification[]
-  
+  medicalHistory      MedicalHistory?
+
   // Doctor-specific relations
-  doctorProfile       Doctor?
-  doctorAppointments  Appointment[] @relation("DoctorAppointments")
+  doctorProfile      Doctor?
+  doctorAppointments Appointment[] @relation("DoctorAppointments")
 
   @@unique([email])
   @@map("user")
@@ -89,81 +109,86 @@ model Doctor {
   isAvailable     Boolean  @default(true)
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
-  
-  availability    DoctorAvailability[]
-  appointments    Appointment[]
-  
+
+  availability DoctorAvailability[]
+  appointments Appointment[]
+
   @@map("doctor")
 }
 
 model DoctorAvailability {
-  id          String   @id @default(cuid())
-  doctorId    String
-  doctor      Doctor   @relation(fields: [doctorId], references: [id], onDelete: Cascade)
-  dayOfWeek   Int      // 0 = Sunday, 6 = Saturday
-  startTime   String   // Format: "HH:MM"
-  endTime     String   // Format: "HH:MM"
-  breakStart  String?  // Format: "HH:MM"
-  breakEnd    String?  // Format: "HH:MM"
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
+  id         String   @id @default(cuid())
+  doctorId   String
+  doctor     Doctor   @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  dayOfWeek  Int // 0 = Sunday, 6 = Saturday
+  startTime  String // Format: "HH:MM"
+  endTime    String // Format: "HH:MM"
+  breakStart String? // Format: "HH:MM"
+  breakEnd   String? // Format: "HH:MM"
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
   @@map("doctor_availability")
 }
 
 model Appointment {
-  id                      String            @id @default(cuid())
-  patientId               String
-  patient                 User              @relation("PatientAppointments", fields: [patientId], references: [id], onDelete: Cascade)
-  doctorId                String
-  doctor                  Doctor            @relation(fields: [doctorId], references: [id], onDelete: Cascade)
-  appointmentDate         DateTime
-  timeSlot                String            // Format: "HH:MM"
-  duration                Int               @default(30) // Duration in minutes
-  status                  AppointmentStatus @default(PENDING)
-  appointmentType         AppointmentType?  @default(CONSULTATION)
-  urgencyLevel            UrgencyLevel?     @default(ROUTINE)
-  reason                  String?
-  symptoms                String?           // Detailed symptoms description
-  notes                   String?
-  cancelReason            String?
+  id                    String            @id @default(cuid())
+  patientId             String
+  patient               User              @relation("PatientAppointments", fields: [patientId], references: [id], onDelete: Cascade)
+  doctorId              String
+  doctor                Doctor            @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  appointmentDate       DateTime
+  timeSlot              String // Format: "HH:MM"
+  duration              Int               @default(30) // Duration in minutes
+  status                AppointmentStatus @default(PENDING)
+  appointmentType       AppointmentType?  @default(CONSULTATION)
+  urgencyLevel          UrgencyLevel?     @default(ROUTINE)
+  reason                String?
+  symptoms              String? // Detailed symptoms description
+  notes                 String?
+  cancelReason          String?
   // Insurance information
-  insuranceProvider       String?
-  insurancePolicyNumber   String?
+  insuranceProvider     String?
+  insurancePolicyNumber String?
   // Emergency contact
-  emergencyContactName    String?
-  emergencyContactPhone   String?
+  emergencyContactName  String?
+  emergencyContactPhone String?
   // Patient contact confirmation
-  patientPhone            String?
-  patientEmail            String?
+  patientPhone          String?
+  patientEmail          String?
   // Previous visit indicator
-  isFollowUp              Boolean           @default(false)
-  previousAppointmentId   String?
-  assignedDoctor          User?             @relation("DoctorAppointments", fields: [assignedDoctorId], references: [id])
-  assignedDoctorId        String?
-  createdAt               DateTime          @default(now())
-  updatedAt               DateTime          @updatedAt
-  
-  notifications           Notification[]
-  
+  isFollowUp            Boolean           @default(false)
+  previousAppointmentId String?
+  assignedDoctor        User?             @relation("DoctorAppointments", fields: [assignedDoctorId], references: [id])
+  assignedDoctorId      String?
+  createdAt             DateTime          @default(now())
+  updatedAt             DateTime          @updatedAt
+
+  // Reminder tracking
+  reminder24hSent Boolean @default(false)
+  reminder1hSent  Boolean @default(false)
+  followUpSent    Boolean @default(false)
+
+  notifications Notification[]
+
   @@map("appointment")
 }
 
 model Notification {
-  id             String           @id @default(cuid())
-  userId         String
-  user           User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  appointmentId  String?
-  appointment    Appointment?     @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
-  type           NotificationType
-  title          String
-  message        String
-  isRead         Boolean          @default(false)
-  sentAt         DateTime         @default(now())
-  emailSent      Boolean          @default(false)
-  createdAt      DateTime         @default(now())
-  
+  id            String           @id @default(cuid())
+  userId        String
+  user          User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  appointmentId String?
+  appointment   Appointment?     @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+  type          NotificationType
+  title         String
+  message       String
+  isRead        Boolean          @default(false)
+  sentAt        DateTime         @default(now())
+  emailSent     Boolean          @default(false)
+  createdAt     DateTime         @default(now())
+
   @@map("notification")
 }
 
@@ -199,6 +224,55 @@ model Account {
   updatedAt             DateTime  @updatedAt
 
   @@map("account")
+}
+
+model MedicalHistory {
+  id                 String    @id @default(cuid())
+  patientId          String    @unique
+  patient            User      @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  bloodType          BloodType @default(UNKNOWN)
+  height             Float? // in cm
+  weight             Float? // in kg
+  surgicalHistory    String?
+  familyHistory      String?
+  currentMedications String?
+  lifestyle          String? // smoking, alcohol, exercise habits
+  notes              String?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  allergies         Allergy[]
+  chronicConditions ChronicCondition[]
+
+  @@map("medical_history")
+}
+
+model Allergy {
+  id               String          @id @default(cuid())
+  medicalHistoryId String
+  medicalHistory   MedicalHistory  @relation(fields: [medicalHistoryId], references: [id], onDelete: Cascade)
+  allergen         String // e.g., "Penicillin", "Peanuts"
+  reaction         String? // e.g., "Hives", "Anaphylaxis"
+  severity         AllergySeverity @default(MODERATE)
+  diagnosedDate    DateTime?
+  notes            String?
+  createdAt        DateTime        @default(now())
+
+  @@map("allergy")
+}
+
+model ChronicCondition {
+  id               String         @id @default(cuid())
+  medicalHistoryId String
+  medicalHistory   MedicalHistory @relation(fields: [medicalHistoryId], references: [id], onDelete: Cascade)
+  condition        String // e.g., "Diabetes Type 2", "Hypertension"
+  diagnosedDate    DateTime?
+  status           String         @default("ACTIVE") // ACTIVE, MANAGED, RESOLVED
+  treatment        String?
+  notes            String?
+  createdAt        DateTime       @default(now())
+
+  @@map("chronic_condition")
 }
 
 model Verification {
