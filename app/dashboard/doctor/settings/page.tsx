@@ -22,6 +22,8 @@ import { toast } from "sonner";
 import { Spinner } from "@/components/ui/spinner";
 import { IconUser, IconTool, IconPalette, IconBell } from "@tabler/icons-react";
 import { ThemeSwitcher } from "@/components/ui/theme-switcher";
+import { Switch } from "@/components/ui/switch";
+import { useNotificationPreferences } from "@/hooks/use-notification-preferences";
 
 interface SettingsSidebarProps extends React.HTMLAttributes<HTMLElement> {
   items: {
@@ -77,6 +79,12 @@ export default function DoctorSettingsPage() {
   const [username, setUsername] = useState(session?.user?.name || "");
   const [email, setEmail] = useState(session?.user?.email || "");
   const [bio, setBio] = useState("I am a medical professional.");
+
+  const {
+    preferences,
+    isLoading: prefsLoading,
+    togglePreference,
+  } = useNotificationPreferences();
 
   const sidebarItems = [
     { title: "Profile", href: "#profile", icon: IconUser },
@@ -219,13 +227,100 @@ export default function DoctorSettingsPage() {
                     </div>
                   </div>
                 )}
-                {activeTab !== "Profile" && activeTab !== "Appearance" && (
-                  <div className="flex h-[400px] flex-col items-center justify-center text-center">
-                    <p className="text-muted-foreground">
-                      {activeTab} settings coming soon.
-                    </p>
+                {activeTab === "Notifications" && (
+                  <div className="space-y-6">
+                    <div>
+                      <h3 className="text-lg font-medium">Notifications</h3>
+                      <p className="text-sm text-muted-foreground">
+                        Configure how you receive notifications.
+                      </p>
+                    </div>
+                    <Separator />
+                    {prefsLoading ? (
+                      <div className="flex items-center justify-center py-8">
+                        <Spinner className="h-6 w-6" />
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between rounded-lg border p-4">
+                          <div className="space-y-0.5">
+                            <label className="text-base font-medium">
+                              Appointment Reminders
+                            </label>
+                            <p className="text-sm text-muted-foreground">
+                              Receive email reminders 24 hours and 1 hour before
+                              appointments.
+                            </p>
+                          </div>
+                          <Switch
+                            checked={preferences?.appointmentReminders ?? true}
+                            onCheckedChange={() =>
+                              togglePreference("appointmentReminders")
+                            }
+                          />
+                        </div>
+                        <div className="flex items-center justify-between rounded-lg border p-4">
+                          <div className="space-y-0.5">
+                            <label className="text-base font-medium">
+                              Booking Confirmations
+                            </label>
+                            <p className="text-sm text-muted-foreground">
+                              Receive email confirmation when appointments are
+                              booked.
+                            </p>
+                          </div>
+                          <Switch
+                            checked={preferences?.bookingConfirmations ?? true}
+                            onCheckedChange={() =>
+                              togglePreference("bookingConfirmations")
+                            }
+                          />
+                        </div>
+                        <div className="flex items-center justify-between rounded-lg border p-4">
+                          <div className="space-y-0.5">
+                            <label className="text-base font-medium">
+                              Cancellation Alerts
+                            </label>
+                            <p className="text-sm text-muted-foreground">
+                              Receive email when appointments are cancelled.
+                            </p>
+                          </div>
+                          <Switch
+                            checked={preferences?.cancellationAlerts ?? true}
+                            onCheckedChange={() =>
+                              togglePreference("cancellationAlerts")
+                            }
+                          />
+                        </div>
+                        <div className="flex items-center justify-between rounded-lg border p-4">
+                          <div className="space-y-0.5">
+                            <label className="text-base font-medium">
+                              Reschedule Alerts
+                            </label>
+                            <p className="text-sm text-muted-foreground">
+                              Receive email when appointments are rescheduled.
+                            </p>
+                          </div>
+                          <Switch
+                            checked={preferences?.rescheduleAlerts ?? true}
+                            onCheckedChange={() =>
+                              togglePreference("rescheduleAlerts")
+                            }
+                          />
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
+                {activeTab !== "Profile" &&
+                  activeTab !== "Appearance" &&
+                  activeTab !== "Notifications" && (
+                    <div className="flex h-[400px] flex-col items-center justify-center text-center">
+                      <p className="text-muted-foreground">
+                        {activeTab} settings coming soon.
+                      </p>
+                    </div>
+                  )}
               </div>
             </div>
           </div>
