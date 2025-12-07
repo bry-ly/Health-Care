@@ -1,10 +1,8 @@
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { emailOTP, lastLoginMethod } from "better-auth/plugins";
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "./prisma";
 import { sendEmail } from "./email";
-
-const prisma = new PrismaClient();
 
 export const auth = betterAuth({
   baseURL: process.env.NEXT_PUBLIC_API_URL || process.env.BETTER_AUTH_URL,
