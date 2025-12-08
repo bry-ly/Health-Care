@@ -9,7 +9,6 @@ import { IconHeartbeat } from "@tabler/icons-react";
 const menuItems = [
   { name: "About", href: "#about" },
   { name: "Features", href: "#features" },
-  { name: "For Doctors", href: "#doctor-content" },
   { name: "For Patients", href: "#patient-content" },
 ];
 
@@ -90,7 +89,7 @@ export const HeroHeader = () => {
                   ))}
                 </ul>
               </div>
-              <div className="flex w-full flex-col space-y-3 sm:flex-row sm:items-center sm:gap-3 sm:space-y-0 md:w-fit"> 
+              <div className="flex w-full flex-col space-y-3 sm:flex-row sm:items-center sm:gap-3 sm:space-y-0 md:w-fit">
                 <Button
                   asChild
                   variant="outline"
