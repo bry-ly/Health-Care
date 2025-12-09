@@ -294,7 +294,6 @@ export default function PatientDashboard() {
                   </Card>
                 </div>
 
-                {/* Recent Appointments */}
                 <Card>
                   <CardHeader>
                     <CardTitle>Recent Appointments</CardTitle>
