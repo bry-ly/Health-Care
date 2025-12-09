@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -24,6 +24,8 @@ type PatientAssistantProps = {
   compact?: boolean;
 };
 
+const STORAGE_KEY = "patient-assistant-messages";
+
 export function PatientAssistant({ compact = false }: PatientAssistantProps) {
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -35,6 +37,27 @@ export function PatientAssistant({ compact = false }: PatientAssistantProps) {
   ]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+
+  // Load saved messages so closing the dialog doesn't wipe the chat
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const stored = window.localStorage.getItem(STORAGE_KEY);
+    if (!stored) return;
+    try {
+      const parsed = JSON.parse(stored);
+      if (Array.isArray(parsed)) {
+        setMessages(parsed);
+      }
+    } catch {
+      // ignore parse errors and keep defaults
+    }
+  }, []);
+
+  // Persist messages to localStorage on change
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(messages));
+  }, [messages]);
 
   const lastThree = useMemo(() => messages.slice(-6), [messages]);
 
@@ -112,7 +135,8 @@ export function PatientAssistant({ compact = false }: PatientAssistantProps) {
         </CardTitle>
         <CardDescription className={cn(compact ? "text-xs" : undefined)}>
           Ask about scheduling, preparation, reminders, or general health info.
-          No diagnosis or treatment. Always check with your clinician.
+          Share doctor, date, and time and I can try booking it for you. No
+          diagnosis or treatment. Always check with your clinician.
         </CardDescription>
       </CardHeader>
       <CardContent
@@ -166,7 +190,7 @@ export function PatientAssistant({ compact = false }: PatientAssistantProps) {
             value={input}
             onChange={(event) => setInput(event.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Ask a question about your visit prep, reminders, or portal… (Enter to send, Shift+Enter for newline)"
+            placeholder="Ask about visits, or say e.g. ‘Book Dr. Lee on 2025-12-12 at 14:30’. (Enter to send, Shift+Enter for newline)"
             className="min-h-24"
           />
           <div className="flex items-center justify-between text-xs text-muted-foreground">

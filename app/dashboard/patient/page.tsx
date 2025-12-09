@@ -17,6 +17,7 @@ import { useSession } from "@/lib/auth-client";
 import { useRouter } from "next/navigation";
 import { useAppointments } from "@/hooks/use-appointments";
 import { AppointmentCard } from "@/components/appointments/appointment-card";
+import { PatientAssistant } from "@/components/dashboard/patient/patient-assistant";
 import {
   IconCalendar,
   IconClock,
@@ -251,7 +252,7 @@ export default function PatientDashboard() {
                 </div>
 
                 {/* Quick Actions */}
-                <div className="grid gap-4 md:grid-cols-2">
+                <div className="grid gap-4 md:grid-cols-3">
                   <Card>
                     <CardHeader>
                       <CardTitle>Book New Appointment</CardTitle>
@@ -292,6 +293,8 @@ export default function PatientDashboard() {
                       </Button>
                     </CardContent>
                   </Card>
+
+                  <PatientAssistant compact />
                 </div>
 
                 <Card>
