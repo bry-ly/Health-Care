@@ -10,6 +10,7 @@ const menuItems = [
   { name: "About", href: "#about" },
   { name: "Features", href: "#features" },
   { name: "For Patients", href: "#patient-content" },
+  { name: "Patient Assistant", href: "/dashboard/patient" },
 ];
 
 export const HeroHeader = () => {
@@ -111,11 +112,31 @@ export const HeroHeader = () => {
                 </Button>
                 <Button
                   asChild
+                  variant="secondary"
+                  size="sm"
+                  className="lg:hidden"
+                >
+                  <Link href="/dashboard/patient">
+                    <span>Patient Assistant</span>
+                  </Link>
+                </Button>
+                <Button
+                  asChild
                   size="sm"
                   className={cn(isScrolled ? "lg:inline-flex" : "hidden")}
                 >
                   <Link href="/signup">
                     <span>Get Started</span>
+                  </Link>
+                </Button>
+                <Button
+                  asChild
+                  size="sm"
+                  variant="outline"
+                  className={cn(isScrolled ? "lg:inline-flex" : "hidden")}
+                >
+                  <Link href="/dashboard/patient">
+                    <span>Patient Assistant</span>
                   </Link>
                 </Button>
               </div>
