@@ -89,7 +89,8 @@ export function PatientAssistant({ compact = false }: PatientAssistantProps) {
   };
 
   const handleKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (event.key === "Enter" && event.metaKey) {
+    // Enter to send, Shift+Enter for newline
+    if (event.key === "Enter" && !event.shiftKey) {
       event.preventDefault();
       sendMessage();
     }
@@ -110,8 +111,8 @@ export function PatientAssistant({ compact = false }: PatientAssistantProps) {
           Need help with your visit?
         </CardTitle>
         <CardDescription className={cn(compact ? "text-xs" : undefined)}>
-          Ask about scheduling, preparation, reminders, or using this portal.
-          Avoid sharing private clinical details.
+          Ask about scheduling, preparation, reminders, or general health info.
+          No diagnosis or treatment. Always check with your clinician.
         </CardDescription>
       </CardHeader>
       <CardContent
@@ -165,7 +166,7 @@ export function PatientAssistant({ compact = false }: PatientAssistantProps) {
             value={input}
             onChange={(event) => setInput(event.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Ask a question about your visit prep, reminders, or portal… (⌘+Enter to send)"
+            placeholder="Ask a question about your visit prep, reminders, or portal… (Enter to send, Shift+Enter for newline)"
             className="min-h-24"
           />
           <div className="flex items-center justify-between text-xs text-muted-foreground">
