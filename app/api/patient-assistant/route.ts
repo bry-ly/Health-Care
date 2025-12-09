@@ -3,6 +3,17 @@ import { headers } from "next/headers";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { auth } from "@/lib/auth";
 import { getClientIp, withRateLimit } from "@/lib/rate-limit";
+import { prisma } from "@/lib/prisma";
+
+type BookingExtraction = {
+  doctorName?: string;
+  doctorId?: string;
+  specialization?: string;
+  date?: string;
+  time?: string;
+  reason?: string;
+  durationMinutes?: number;
+};
 
 const MODEL_NAME = process.env.GEMINI_MODEL;
 
@@ -56,8 +67,21 @@ export async function POST(request: NextRequest) {
 
   const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
+  // Support booking intent: when the client requests booking, try structured extraction and creation.
+  if (typeof prompt === "string" && prompt.toLowerCase().includes("book")) {
+    const bookingResponse = await handleBookingIntent({
+      prompt,
+      session,
+      modelName: MODEL_NAME,
+    });
+
+    if (bookingResponse) {
+      return bookingResponse;
+    }
+  }
+
   // Fallback to a known-available model if the configured one is unsupported.
-  const modelName = MODEL_NAME;
+  const modelName = MODEL_NAME || "gemini-1.5-pro";
   const model = genAI.getGenerativeModel({
     model: modelName,
     tools: [{ googleSearch: {} }],
@@ -108,5 +132,217 @@ export async function POST(request: NextRequest) {
       { error: "Failed to generate response" },
       { status: 500 }
     );
+  }
+}
+
+async function handleBookingIntent({
+  prompt,
+  session,
+  modelName,
+}: {
+  prompt: string;
+  session: any;
+  modelName?: string;
+}): Promise<NextResponse | null> {
+  try {
+    const extractorClient = new GoogleGenerativeAI(
+      process.env.GEMINI_API_KEY as string
+    );
+    const extractor = extractorClient.getGenerativeModel({
+      model: modelName || "gemini-1.5-pro",
+    });
+    const extractionPrompt =
+      "Extract appointment booking details from the patient message. " +
+      "Return ONLY compact JSON with keys: doctorName (string), doctorId (string optional), specialization (string optional), date (YYYY-MM-DD), time (HH:mm 24h), reason (string), durationMinutes (number, default 30). " +
+      "If any required field (doctor, date, time) is missing, still return JSON with nulls for missing fields. No prose, no backticks.";
+
+    const extraction = await extractor.generateContent(
+      `${extractionPrompt}\nPatient message: ${prompt}\nJSON:`
+    );
+
+    const extracted = safeParseJson<BookingExtraction>(
+      extraction.response.text()
+    );
+
+    if (!extracted) {
+      return NextResponse.json(
+        {
+          reply:
+            "I couldn't read the details. Please include doctor name, date (YYYY-MM-DD), and time (HH:mm).",
+        },
+        { status: 200 }
+      );
+    }
+
+    const missingFields = [];
+    if (!extracted.doctorName && !extracted.doctorId)
+      missingFields.push("doctor");
+    if (!extracted.date) missingFields.push("date");
+    if (!extracted.time) missingFields.push("time");
+
+    if (missingFields.length) {
+      return NextResponse.json(
+        {
+          reply: `I need ${missingFields.join(", ")} to book. Please share doctor name, date (YYYY-MM-DD), and time (HH:mm).`,
+        },
+        { status: 200 }
+      );
+    }
+
+    const doctor = await findDoctor(extracted);
+
+    if (!doctor) {
+      return NextResponse.json(
+        {
+          reply:
+            "I couldn't find that doctor. Please provide the doctor's name or specialization exactly as shown in your doctor list.",
+        },
+        { status: 200 }
+      );
+    }
+
+    const appointmentDate = buildDate(extracted.date!, extracted.time!);
+    if (!appointmentDate) {
+      return NextResponse.json(
+        {
+          reply:
+            "I couldn't parse the date/time. Please use YYYY-MM-DD for date and HH:mm (24h) for time.",
+        },
+        { status: 200 }
+      );
+    }
+
+    const slotTaken = await prisma.appointment.findFirst({
+      where: {
+        doctorId: doctor.id,
+        appointmentDate: appointmentDate,
+        timeSlot: extracted.time,
+        status: {
+          notIn: ["CANCELLED"],
+        },
+      },
+    });
+
+    if (slotTaken) {
+      return NextResponse.json(
+        {
+          reply: "That time is already booked. Please pick another time slot.",
+        },
+        { status: 200 }
+      );
+    }
+
+    const appointment = await prisma.appointment.create({
+      data: {
+        patientId: session.user.id,
+        doctorId: doctor.id,
+        appointmentDate,
+        timeSlot: extracted.time!,
+        reason: extracted.reason || "AI-booked appointment",
+        duration: extracted.durationMinutes || 30,
+        appointmentType: "CONSULTATION",
+        urgencyLevel: "ROUTINE",
+        status: "PENDING",
+      },
+      include: {
+        doctor: { include: { user: true } },
+        patient: true,
+      },
+    });
+
+    // Send confirmation notification + email to patient
+    const { createNotification } = await import("@/lib/notifications");
+    await createNotification({
+      userId: session.user.id,
+      appointmentId: appointment.id,
+      type: "BOOKING_CONFIRMATION",
+      title: "Appointment Booked",
+      message: `Your appointment has been booked for ${appointment.appointmentDate.toLocaleDateString()} at ${appointment.timeSlot}`,
+      sendEmail: true,
+      emailData: {
+        patientName: appointment.patient.name,
+        doctorName: appointment.doctor.user.name,
+        appointmentDate: appointment.appointmentDate,
+        timeSlot: appointment.timeSlot,
+        reason: appointment.reason || undefined,
+      },
+    });
+
+    return NextResponse.json(
+      {
+        reply: `Booked with ${appointment.doctor.user.name} on ${appointment.appointmentDate.toDateString()} at ${appointment.timeSlot}. Status: pending confirmation.`,
+        appointment,
+      },
+      { status: 200 }
+    );
+  } catch (error) {
+    console.error("booking intent error", error);
+    return NextResponse.json(
+      {
+        reply:
+          "I couldn't complete the booking. Please check the details and try again.",
+      },
+      { status: 200 }
+    );
+  }
+}
+
+function safeParseJson<T>(text: string): T | null {
+  try {
+    const match = text.match(/\{[\s\S]*\}/);
+    if (!match) return null;
+    return JSON.parse(match[0]) as T;
+  } catch {
+    return null;
+  }
+}
+
+async function findDoctor(extracted: BookingExtraction) {
+  if (extracted.doctorId) {
+    const byId = await prisma.doctor.findUnique({
+      where: { id: extracted.doctorId },
+      include: { user: true },
+    });
+    if (byId) return byId;
+  }
+
+  if (extracted.doctorName) {
+    const byName = await prisma.doctor.findFirst({
+      where: {
+        user: {
+          name: {
+            contains: extracted.doctorName,
+            mode: "insensitive",
+          },
+        },
+        ...(extracted.specialization
+          ? { specialization: extracted.specialization }
+          : {}),
+      },
+      include: { user: true },
+    });
+    if (byName) return byName;
+  }
+
+  if (extracted.specialization) {
+    return prisma.doctor.findFirst({
+      where: { specialization: extracted.specialization },
+      include: { user: true },
+    });
+  }
+
+  return null;
+}
+
+function buildDate(date: string, time: string): Date | null {
+  try {
+    const [hour, minute] = time.split(":").map(Number);
+    if (Number.isNaN(hour) || Number.isNaN(minute)) return null;
+    const base = new Date(date);
+    if (Number.isNaN(base.getTime())) return null;
+    base.setHours(hour, minute, 0, 0);
+    return base;
+  } catch {
+    return null;
   }
 }
