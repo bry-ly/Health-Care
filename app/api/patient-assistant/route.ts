@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { headers } from "next/headers";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { auth } from "@/lib/auth";
+import { getClientIp, withRateLimit } from "@/lib/rate-limit";
 
-const MODEL_NAME = "gemini-2.5-flash";
+const MODEL_NAME = process.env.GEMINI_MODEL;
 
 export async function POST(request: NextRequest) {
   const session = await auth.api.getSession({
@@ -16,6 +17,16 @@ export async function POST(request: NextRequest) {
 
   if (session.user.role !== "PATIENT") {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  const rateLimitKey = `patient-assistant:${session.user.id ?? getClientIp(request)}`;
+  const rateLimit = withRateLimit(rateLimitKey, {
+    limit: 10,
+    windowSeconds: 60,
+  });
+
+  if (!rateLimit.success && rateLimit.response) {
+    return rateLimit.response;
   }
 
   if (!process.env.GEMINI_API_KEY) {
@@ -44,11 +55,18 @@ export async function POST(request: NextRequest) {
       : [];
 
   const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-  const model = genAI.getGenerativeModel({ model: MODEL_NAME });
+
+  // Fallback to a known-available model if the configured one is unsupported.
+  const modelName = MODEL_NAME;
+  const model = genAI.getGenerativeModel({
+    model: modelName,
+    tools: [{ googleSearch: {} }],
+  });
 
   const systemPreamble =
-    "You are a calm, concise assistant that helps patients understand appointments, preparation, aftercare, and portal features. " +
-    "Avoid medical diagnosis or prescribing. Encourage contacting their doctor for clinical concerns. Keep answers short and actionable.";
+    "You are a calm, concise assistant that can share general, educational health information (what a condition is, common symptoms, typical next steps), " +
+    "but you must not diagnose, confirm a condition, or prescribe. Always include a brief disclaimer and encourage the user to contact a clinician for personal evaluation. " +
+    "You also help with appointments, preparation, aftercare, reminders, and portal features. Keep answers short and practical.";
 
   const conversation = sanitizedHistory
     .map(
@@ -67,10 +85,23 @@ export async function POST(request: NextRequest) {
     .join("\n");
 
   try {
-    const result = await model.generateContent(composedPrompt);
+    let result;
+    try {
+      result = await model.generateContent(composedPrompt);
+    } catch (err) {
+      // Attempt fallback to a stable model if the requested one is unavailable
+      const fallbackModel = genAI.getGenerativeModel({
+        model: "gemini-1.5-pro",
+        tools: [{ googleSearch: {} }],
+      });
+      result = await fallbackModel.generateContent(composedPrompt);
+    }
     const reply = result.response.text();
+    const sources =
+      result.response.candidates?.[0]?.groundingMetadata?.webSearchSources ||
+      [];
 
-    return NextResponse.json({ reply });
+    return NextResponse.json({ reply, sources });
   } catch (error) {
     console.error("patient-assistant error", error);
     return NextResponse.json(
